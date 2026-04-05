@@ -1,4 +1,5 @@
 import type { ToolCall } from "../types";
+import { cn } from "../utils/cn";
 
 type Props = {
   call: ToolCall;
@@ -6,7 +7,13 @@ type Props = {
 
 export function ToolBlock({ call }: Props) {
   return (
-    <div className="my-2 rounded border-l-3 border-gray-600 bg-gray-800 p-3 font-mono text-sm">
+    <div
+      className={cn(
+        "my-2 rounded p-3",
+        "border-l-3 border-gray-600 bg-gray-800",
+        "font-mono text-sm",
+      )}
+    >
       <div className="mb-1 text-xs text-gray-500 uppercase">Tool Call</div>
       <div>
         {call.name}({JSON.stringify(call.args)})
