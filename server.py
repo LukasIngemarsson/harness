@@ -9,11 +9,9 @@ from agent import create_agent
 from config import load_config
 from memory.conversation import Conversation
 from prompts import build_system_prompt
+from utils.log import setup_logging
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-)
+setup_logging()
 logger = logging.getLogger(__name__)
 
 config = load_config()
@@ -26,6 +24,11 @@ app.mount("/assets", StaticFiles(directory="static/assets"), name="assets")
 @app.get("/")
 async def root() -> FileResponse:
     return FileResponse("static/index.html")
+
+
+@app.get("/api/info")
+async def info() -> dict:
+    return {"model": config["model"]}
 
 
 @app.websocket("/ws")
