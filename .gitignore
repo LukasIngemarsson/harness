@@ -6,7 +6,8 @@ dist/
 __pycache__/
 .pytest_cache/
 memory/history.json
-notes/
+.logs/
+.notes/
 .workspace/
 frontend/node_modules/
 static/

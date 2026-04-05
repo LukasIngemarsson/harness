@@ -7,7 +7,15 @@ import { ChatInput } from "./components/ChatInput";
 export default function App() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [busy, setBusy] = useState(false);
+  const [model, setModel] = useState<string>("");
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    fetch("/api/info")
+      .then((r) => r.json())
+      .then((data) => setModel(data.model))
+      .catch(() => setModel("unknown"));
+  }, []);
 
   const onEvent = useCallback((event: AgentEvent) => {
     switch (event.type) {
@@ -96,9 +104,12 @@ export default function App() {
     <div className="flex h-screen flex-col bg-gray-900 text-gray-200">
       <header className="flex justify-between border-b border-gray-700 px-5 py-3 text-sm text-gray-500">
         <span>Harness</span>
-        <span className={connected ? "text-green-500" : "text-red-500"}>
-          {connected ? "Connected" : "Disconnected"}
-        </span>
+        <div className="flex items-center gap-3">
+          {model && <span className="text-gray-400">{model}</span>}
+          <span className={connected ? "text-green-500" : "text-red-500"}>
+            {connected ? "Connected" : "Disconnected"}
+          </span>
+        </div>
       </header>
 
       <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-5">
