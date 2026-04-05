@@ -10,13 +10,16 @@ class TestCalculatorTool:
         self.calc = CalculatorTool()
 
     def test_add(self):
-        assert self.calc.execute(a=2, b=3, operation="add") == "5"
+        assert self.calc.execute(a=2, b=3, operation="add") == "5.0"
 
     def test_subtract(self):
-        assert self.calc.execute(a=10, b=4, operation="subtract") == "6"
+        assert self.calc.execute(a=10, b=4, operation="subtract") == "6.0"
 
     def test_multiply(self):
-        assert self.calc.execute(a=3, b=7, operation="multiply") == "21"
+        assert self.calc.execute(a=3, b=7, operation="multiply") == "21.0"
+
+    def test_string_args_rejected(self):
+        assert "Error" in self.calc.execute(a="hello", b=2, operation="add")
 
     def test_divide(self):
         assert self.calc.execute(a=10, b=4, operation="divide") == "2.5"

@@ -19,12 +19,17 @@ class CalculatorTool(Tool):
     }
 
     def execute(self, a: float, b: float, operation: str) -> str:
-        if operation == "add":
-            return str(a + b)
-        if operation == "subtract":
-            return str(a - b)
-        if operation == "multiply":
-            return str(a * b)
-        if operation == "divide":
-            return str(a / b) if b != 0 else "Error: division by zero"
+        try:
+            a, b = float(a), float(b)
+        except (TypeError, ValueError):
+            return "Error: a and b must be numbers"
+        match operation:
+            case "add":
+                return str(a + b)
+            case "subtract":
+                return str(a - b)
+            case "multiply":
+                return str(a * b)
+            case "divide":
+                return str(a / b) if b != 0 else "Error: division by zero"
         return "Unknown operation"
