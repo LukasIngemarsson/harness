@@ -3,18 +3,25 @@ import type { AgentEvent, ChatMessage, ToolCall } from "./types";
 import { useSocket } from "./hooks/useSocket";
 import { MessageBubble } from "./components/MessageBubble";
 import { ChatInput } from "./components/ChatInput";
+import { ThinkingIndicator } from "./components/ThinkingIndicator";
 import { cn } from "./utils/cn";
 
 export default function App() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [busy, setBusy] = useState(false);
+  const [busySince, setBusySince] = useState(0);
   const [model, setModel] = useState<string>("");
+  const [tokenCount, setTokenCount] = useState(0);
+  const [contextLength, setContextLength] = useState<number | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetch("/api/info")
       .then((r) => r.json())
-      .then((data) => setModel(data.model))
+      .then((data) => {
+        setModel(data.model);
+        if (data.context_length) setContextLength(data.context_length);
+      })
       .catch(() => setModel("unknown"));
   }, []);
 
@@ -75,17 +82,21 @@ export default function App() {
         break;
 
       case "done":
+        if (event.usage) {
+          setTokenCount(event.usage.total_tokens);
+        }
         setBusy(false);
         break;
 
       case "cleared":
-        setMessages([]);
+        setMessages([{ role: "system", content: "Conversation cleared." }]);
+        setTokenCount(0);
         setBusy(false);
         break;
     }
   }, []);
 
-  const { sendMessage, connected } = useSocket(onEvent);
+  const { sendMessage, connected, reconnect } = useSocket(onEvent);
 
   function handleSend(text: string) {
     if (text.toLowerCase() === "/clear") {
@@ -95,11 +106,25 @@ export default function App() {
     setMessages((prev) => [...prev, { role: "user", content: text }]);
     sendMessage(text);
     setBusy(true);
+    setBusySince(Date.now());
+  }
+
+  function handleCancel() {
+    reconnect();
+    setBusy(false);
   }
 
   useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape" && busy) handleCancel();
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [busy]);
+
+  useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, busy]);
 
   return (
     <div className="flex h-screen flex-col bg-gray-900 text-gray-200">
@@ -111,10 +136,31 @@ export default function App() {
       >
         <span>Harness</span>
         <div className="flex items-center gap-3">
-          {model && <span className="text-gray-400">{model}</span>}
-          <span className={connected ? "text-green-500" : "text-red-500"}>
-            {connected ? "Connected" : "Disconnected"}
+          <span className="flex items-center gap-1 text-gray-500">
+            <svg
+              viewBox="0 0 16 16"
+              className="h-3.5 w-3.5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+            >
+              <ellipse cx="8" cy="11" rx="5" ry="2" />
+              <ellipse cx="8" cy="8" rx="5" ry="2" />
+              <ellipse cx="8" cy="5" rx="5" ry="2" />
+              <line x1="3" y1="5" x2="3" y2="11" />
+              <line x1="13" y1="5" x2="13" y2="11" />
+            </svg>
+            {(tokenCount / 1000).toFixed(1)}k
+            {contextLength && ` / ${(contextLength / 1000).toFixed(1)}k`}
           </span>
+          {model && <span className="text-gray-400">{model}</span>}
+          <span
+            className={cn(
+              "inline-block h-2 w-2 rounded-full",
+              connected ? "bg-green-500" : "bg-red-500",
+            )}
+            title={connected ? "Connected" : "Disconnected"}
+          />
         </div>
       </header>
 
@@ -122,10 +168,16 @@ export default function App() {
         {messages.map((msg, i) => (
           <MessageBubble key={i} message={msg} />
         ))}
+        {busy && <ThinkingIndicator startTime={busySince} />}
         <div ref={bottomRef} />
       </div>
 
-      <ChatInput onSend={handleSend} disabled={busy || !connected} />
+      <ChatInput
+        onSend={handleSend}
+        onCancel={handleCancel}
+        busy={busy}
+        disabled={!connected}
+      />
     </div>
   );
 }

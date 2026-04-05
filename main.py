@@ -24,7 +24,7 @@ def main() -> None:
             break
         if user_input.lower() == "/clear":
             Conversation.clear_history()
-            conversation = Conversation(build_system_prompt())
+            conversation = Conversation(system_prompt)
             print("Conversation cleared.\n")
             continue
 

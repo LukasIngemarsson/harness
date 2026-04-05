@@ -1,5 +1,7 @@
 import asyncio
+import json
 import logging
+import urllib.request
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
@@ -28,14 +30,30 @@ async def root() -> FileResponse:
 
 @app.get("/api/info")
 async def info() -> dict:
-    return {"model": config["model"]}
+    context_length = None
+    try:
+        req = urllib.request.Request(
+            f"{config['base_url'].replace('/v1', '')}/api/show",
+            data=json.dumps({"name": config["model"]}).encode(),
+        )
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            data = json.loads(resp.read().decode())
+            for key, value in data.get("model_info", {}).items():
+                if "context_length" in key:
+                    context_length = value
+                    break
+    except Exception:
+        pass
+
+    return {"model": config["model"], "context_length": context_length}
 
 
 @app.websocket("/ws")
 async def websocket_endpoint(ws: WebSocket) -> None:
     await ws.accept()
     logger.info("WebSocket connected")
-    conversation = Conversation.load(build_system_prompt())
+    system_prompt = build_system_prompt()
+    conversation = Conversation.load(system_prompt)
 
     try:
         while True:
@@ -47,7 +65,7 @@ async def websocket_endpoint(ws: WebSocket) -> None:
 
             if message.lower() == "/clear":
                 Conversation.clear_history()
-                conversation = Conversation(build_system_prompt())
+                conversation = Conversation(system_prompt)
                 await ws.send_json({"type": "cleared"})
                 continue
 

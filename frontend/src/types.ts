@@ -8,7 +8,12 @@ type ToolCallEvent = {
 type ToolResultEvent = { type: "tool_result"; result: string };
 type ToolEndEvent = { type: "tool_end" };
 type ErrorEvent = { type: "error"; content: string };
-type DoneEvent = { type: "done" };
+type Usage = {
+  prompt_tokens: number;
+  completion_tokens: number;
+  total_tokens: number;
+};
+type DoneEvent = { type: "done"; usage: Usage | null };
 type ClearedEvent = { type: "cleared" };
 
 export type AgentEvent =
@@ -24,7 +29,8 @@ export type AgentEvent =
 export type ChatMessage =
   | { role: "user"; content: string }
   | { role: "assistant"; content: string; toolCalls?: ToolCall[] }
-  | { role: "tool"; calls: ToolCall[] };
+  | { role: "tool"; calls: ToolCall[] }
+  | { role: "system"; content: string };
 
 export type ToolCall = {
   name: string;
