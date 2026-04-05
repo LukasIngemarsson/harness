@@ -26,8 +26,7 @@ class TestCalculatorTool:
 
     def test_divide_by_zero(self):
         assert (
-            self.calc.execute(a=5, b=0, operation="divide")
-            == "Error: division by zero"
+            self.calc.execute(a=5, b=0, operation="divide") == "Error: division by zero"
         )
 
     def test_unknown_operation(self):
