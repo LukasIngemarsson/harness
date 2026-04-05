@@ -6,3 +6,4 @@ dist/
 __pycache__/
 memory/history.json
 notes/
+.workspace/

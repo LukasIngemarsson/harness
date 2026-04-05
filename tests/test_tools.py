@@ -1,4 +1,5 @@
 from tools import TOOLS
+from tools.base import WORKSPACE_DIR
 from tools.calculator import CalculatorTool
 from tools.file_read import FileReadTool
 from tools.file_write import FileWriteTool
@@ -26,7 +27,8 @@ class TestCalculatorTool:
 
     def test_divide_by_zero(self):
         assert (
-            self.calc.execute(a=5, b=0, operation="divide") == "Error: division by zero"
+            self.calc.execute(a=5, b=0, operation="divide")
+            == "Error: division by zero"
         )
 
     def test_unknown_operation(self):
@@ -37,32 +39,43 @@ class TestFileReadTool:
     def setup_method(self):
         self.reader = FileReadTool()
 
-    def test_read_existing_file(self, tmp_path):
-        f = tmp_path / "test.txt"
+    def test_read_existing_file(self):
+        f = WORKSPACE_DIR / "_test_read.txt"
         f.write_text("hello")
-        assert self.reader.execute(path=str(f)) == "hello"
+        assert self.reader.execute(path="_test_read.txt") == "hello"
+        f.unlink()
 
     def test_read_missing_file(self):
-        assert "Error: file not found" in self.reader.execute(path="/nonexistent")
+        assert "Error: file not found" in self.reader.execute(
+            path="_nonexistent.txt"
+        )
 
-    def test_read_directory(self, tmp_path):
-        assert "Error: not a file" in self.reader.execute(path=str(tmp_path))
+    def test_path_traversal_blocked(self):
+        assert "access denied" in self.reader.execute(path="../../config.py")
 
 
 class TestFileWriteTool:
     def setup_method(self):
         self.writer = FileWriteTool()
 
-    def test_write_new_file(self, tmp_path):
-        f = tmp_path / "out.txt"
-        result = self.writer.execute(path=str(f), content="hello")
+    def test_write_new_file(self):
+        result = self.writer.execute(path="_test_write.txt", content="hello")
         assert "Successfully" in result
+        f = WORKSPACE_DIR / "_test_write.txt"
         assert f.read_text() == "hello"
+        f.unlink()
 
-    def test_write_creates_parents(self, tmp_path):
-        f = tmp_path / "a" / "b" / "out.txt"
-        self.writer.execute(path=str(f), content="nested")
+    def test_write_creates_parents(self):
+        self.writer.execute(path="_test_dir/nested.txt", content="nested")
+        f = WORKSPACE_DIR / "_test_dir" / "nested.txt"
         assert f.read_text() == "nested"
+        f.unlink()
+        (WORKSPACE_DIR / "_test_dir").rmdir()
+
+    def test_path_traversal_blocked(self):
+        assert "access denied" in self.writer.execute(
+            path="../../evil.txt", content="bad"
+        )
 
 
 class TestShellTool:
@@ -78,7 +91,6 @@ class TestShellTool:
         assert "not allowed" in result
 
     def test_timeout(self):
-        # not testing actual timeout, just that the param shape works
         result = self.shell.execute(command="echo fast")
         assert "fast" in result
 

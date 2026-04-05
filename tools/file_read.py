@@ -1,6 +1,5 @@
-from pathlib import Path
 
-from tools.base import Tool
+from tools.base import WORKSPACE_DIR, Tool
 
 
 class FileReadTool(Tool):
@@ -15,7 +14,9 @@ class FileReadTool(Tool):
     }
 
     def execute(self, path: str, **kwargs: object) -> str:
-        target = Path(path)
+        target = (WORKSPACE_DIR / path).resolve()
+        if not str(target).startswith(str(WORKSPACE_DIR.resolve())):
+            return "Error: access denied — path is outside workspace"
         if not target.exists():
             return f"Error: file not found: {path}"
         if not target.is_file():

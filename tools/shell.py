@@ -1,11 +1,9 @@
 import shlex
 import subprocess
-from pathlib import Path
 
-from tools.base import Tool
+from tools.base import WORKSPACE_DIR, Tool
 
 TIMEOUT_SECONDS = 30
-WORKING_DIR = Path.cwd()
 ALLOWED_COMMANDS = {
     "ls",
     "cat",
@@ -53,7 +51,7 @@ class ShellTool(Tool):
                 capture_output=True,
                 text=True,
                 timeout=TIMEOUT_SECONDS,
-                cwd=WORKING_DIR,
+                cwd=WORKSPACE_DIR,
             )
             output = result.stdout + result.stderr
             return output.strip() if output.strip() else "(no output)"
