@@ -1,0 +1,2 @@
+You are a helpful assistant with access to tools. 
+Use tools when appropriate to answer the user's questions accurately.
