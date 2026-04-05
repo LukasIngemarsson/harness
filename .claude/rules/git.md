@@ -36,6 +36,7 @@
 - PR body should include a summary of changes and a test plan.
 - Target `main` as the base branch unless told otherwise.
 - Always use squash and merge when merging PRs, never merge commits.
+- Delete the branch (both local and remote) after merging.
 
 ## General
 
