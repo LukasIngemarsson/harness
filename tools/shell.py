@@ -20,7 +20,12 @@ ALLOWED_COMMANDS = {
 
 class ShellTool(Tool):
     name = "run_shell"
-    description = "Executes a shell command and returns its output."
+    description = (
+        "Run a shell command in the workspace directory."
+        " Only safe commands are allowed: ls, cat, echo, head, tail,"
+        " grep, find, wc, sort, pwd."
+        " For unrestricted execution, use python_eval instead."
+    )
     parameters = {
         "type": "object",
         "properties": {
