@@ -3,6 +3,7 @@ import type { AgentEvent, ChatMessage, ToolCall } from "./types";
 import { useSocket } from "./hooks/useSocket";
 import { MessageBubble } from "./components/MessageBubble";
 import { ChatInput } from "./components/ChatInput";
+import { cn } from "./utils/cn";
 
 export default function App() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -102,7 +103,12 @@ export default function App() {
 
   return (
     <div className="flex h-screen flex-col bg-gray-900 text-gray-200">
-      <header className="flex justify-between border-b border-gray-700 px-5 py-3 text-sm text-gray-500">
+      <header
+        className={cn(
+          "flex justify-between px-5 py-3",
+          "border-b border-gray-700 text-sm text-gray-500",
+        )}
+      >
         <span>Harness</span>
         <div className="flex items-center gap-3">
           {model && <span className="text-gray-400">{model}</span>}
