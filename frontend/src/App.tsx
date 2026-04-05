@@ -11,7 +11,7 @@ export default function App() {
   const [busy, setBusy] = useState(false);
   const [busySince, setBusySince] = useState(0);
   const [model, setModel] = useState<string>("");
-  const [tokenCount, setTokenCount] = useState(0);
+  const [tokenCount, setTokenCount] = useState<number | null>(null);
   const [contextLength, setContextLength] = useState<number | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -90,9 +90,10 @@ export default function App() {
 
       case "cleared":
         setMessages([{ role: "system", content: "Conversation cleared." }]);
-        setTokenCount(0);
+        setTokenCount(null);
         setBusy(false);
         break;
+
     }
   }, []);
 
@@ -150,7 +151,7 @@ export default function App() {
               <line x1="3" y1="5" x2="3" y2="11" />
               <line x1="13" y1="5" x2="13" y2="11" />
             </svg>
-            {(tokenCount / 1000).toFixed(1)}k
+            {tokenCount !== null ? `${(tokenCount / 1000).toFixed(1)}k` : "–"}
             {contextLength && ` / ${(contextLength / 1000).toFixed(1)}k`}
           </span>
           {model && <span className="text-gray-400">{model}</span>}
