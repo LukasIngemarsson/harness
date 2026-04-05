@@ -1,3 +1,5 @@
+import logging
+
 from agent import create_agent
 from config import load_config
 from memory.conversation import Conversation
@@ -7,6 +9,10 @@ from utils.io import error_msg, role_prefix, tool_call_msg, tool_result_msg
 
 
 def main() -> None:
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    )
     config = load_config()
     run_agent = create_agent(config)
 

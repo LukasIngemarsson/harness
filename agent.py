@@ -1,4 +1,5 @@
 import json
+import logging
 from collections.abc import Callable, Iterator
 
 from openai import OpenAI
@@ -6,6 +7,8 @@ from openai import OpenAI
 from memory.conversation import Conversation
 from tools import TOOLS
 from utils.enums import Role
+
+logger = logging.getLogger(__name__)
 
 TOOL_DEFINITIONS = [tool.to_api_format() for tool in TOOLS]
 TOOL_MAP = {tool.name: tool for tool in TOOLS}
@@ -15,9 +18,8 @@ def create_agent(config: dict) -> Callable[[Conversation, str], Iterator]:
     client = OpenAI(base_url=config["base_url"], api_key=config["api_key"])
     model = config["model"]
 
-    def run_agent(
-        conversation: Conversation, user_message: str
-    ) -> Iterator[dict]:
+    def run_agent(conversation: Conversation, user_message: str) -> Iterator[dict]:
+        logger.info("User message: %s", user_message)
         conversation.add_user_message(user_message)
 
         while True:
@@ -30,6 +32,7 @@ def create_agent(config: dict) -> Callable[[Conversation, str], Iterator]:
                     stream=True,
                 )
             except Exception as e:
+                logger.error("Failed to reach model: %s", e)
                 yield {"type": "error", "content": str(e)}
                 break
 
@@ -90,6 +93,7 @@ def create_agent(config: dict) -> Callable[[Conversation, str], Iterator]:
                     )
                     continue
 
+                logger.info("Tool call: %s(%s)", name, args)
                 yield {"type": "tool_call", "name": name, "args": args}
 
                 if name in TOOL_MAP:
@@ -97,6 +101,7 @@ def create_agent(config: dict) -> Callable[[Conversation, str], Iterator]:
                 else:
                     result = f"Error: tool '{name}' not found"
 
+                logger.info("Tool result: %s", result)
                 yield {"type": "tool_result", "result": result}
 
                 conversation.add_tool_result(tool_call["id"], str(result))

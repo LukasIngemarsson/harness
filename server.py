@@ -1,4 +1,5 @@
 import asyncio
+import logging
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
@@ -8,6 +9,12 @@ from agent import create_agent
 from config import load_config
 from memory.conversation import Conversation
 from prompts import build_system_prompt
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+)
+logger = logging.getLogger(__name__)
 
 config = load_config()
 run_agent = create_agent(config)
@@ -24,6 +31,7 @@ async def root() -> FileResponse:
 @app.websocket("/ws")
 async def websocket_endpoint(ws: WebSocket) -> None:
     await ws.accept()
+    logger.info("WebSocket connected")
     conversation = Conversation.load(build_system_prompt())
 
     try:
@@ -45,4 +53,5 @@ async def websocket_endpoint(ws: WebSocket) -> None:
                 await asyncio.sleep(0)
 
     except WebSocketDisconnect:
+        logger.info("WebSocket disconnected")
         conversation.save()
