@@ -20,7 +20,7 @@ config = load_config()
 run_agent = create_agent(config)
 
 app = FastAPI()
-app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/assets", StaticFiles(directory="static/assets"), name="assets")
 
 
 @app.get("/")
