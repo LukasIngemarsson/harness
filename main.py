@@ -1,16 +1,9 @@
-from datetime import date
-
 from agent import create_agent
 from config import load_config
 from memory.conversation import Conversation
-from tools import TOOLS
-from utils.file import load_prompt
-
-
-def build_system_prompt() -> str:
-    template = load_prompt("prompts", "system.txt")
-    tool_list = "\n".join(f"- {tool.name}: {tool.description}" for tool in TOOLS)
-    return template.format_map({"date": date.today(), "tools": tool_list})
+from prompts import build_system_prompt
+from utils.enums import Role
+from utils.io import error_msg, role_prefix, tool_call_msg, tool_result_msg
 
 
 def main() -> None:
@@ -32,7 +25,23 @@ def main() -> None:
             conversation = Conversation(build_system_prompt())
             print("Conversation cleared.\n")
             continue
-        run_agent(conversation, user_input)
+
+        prefix_printed = False
+        for event in run_agent(conversation, user_input):
+            match event["type"]:
+                case "token":
+                    if not prefix_printed:
+                        print(role_prefix(Role.ASSISTANT), end="", flush=True)
+                        prefix_printed = True
+                    print(event["content"], end="", flush=True)
+                case "tool_call":
+                    print(tool_call_msg(event["name"], event["args"]))
+                case "tool_result":
+                    print(tool_result_msg(event["result"]))
+                case "error":
+                    print(error_msg(event["content"]))
+                case "done":
+                    print("\n")
 
     conversation.save()
     print("Conversation saved.")

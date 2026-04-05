@@ -1,22 +1,23 @@
 import json
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 
 from openai import OpenAI
 
 from memory.conversation import Conversation
 from tools import TOOLS
 from utils.enums import Role
-from utils.io import error_msg, role_prefix, tool_call_msg, tool_result_msg
 
 TOOL_DEFINITIONS = [tool.to_api_format() for tool in TOOLS]
 TOOL_MAP = {tool.name: tool for tool in TOOLS}
 
 
-def create_agent(config: dict) -> Callable[[Conversation, str], None]:
+def create_agent(config: dict) -> Callable[[Conversation, str], Iterator]:
     client = OpenAI(base_url=config["base_url"], api_key=config["api_key"])
     model = config["model"]
 
-    def run_agent(conversation: Conversation, user_message: str) -> None:
+    def run_agent(
+        conversation: Conversation, user_message: str
+    ) -> Iterator[dict]:
         conversation.add_user_message(user_message)
 
         while True:
@@ -29,20 +30,16 @@ def create_agent(config: dict) -> Callable[[Conversation, str], None]:
                     stream=True,
                 )
             except Exception as e:
-                print(error_msg(f"Failed to reach model: {e}"))
+                yield {"type": "error", "content": str(e)}
                 break
 
             content = ""
             tool_calls = {}
-            prefix_printed = False
             for chunk in response:
                 delta = chunk.choices[0].delta
                 if delta.content:
-                    if not prefix_printed:
-                        print(role_prefix(Role.ASSISTANT), end="", flush=True)
-                        prefix_printed = True
                     content += delta.content
-                    print(delta.content, end="", flush=True)
+                    yield {"type": "token", "content": delta.content}
                 if delta.tool_calls:
                     for tool_call in delta.tool_calls:
                         if tool_call.index not in tool_calls:
@@ -57,7 +54,7 @@ def create_agent(config: dict) -> Callable[[Conversation, str], None]:
                             )
 
             if not tool_calls:
-                print("\n")
+                yield {"type": "done"}
                 break
 
             conversation.add_assistant_message(
@@ -77,28 +74,33 @@ def create_agent(config: dict) -> Callable[[Conversation, str], None]:
                     ],
                 }
             )
+            yield {"type": "tool_start"}
             for tool_call in tool_calls.values():
                 name = tool_call["name"]
                 try:
                     args = json.loads(tool_call["arguments"])
                 except json.JSONDecodeError:
-                    print(
-                        error_msg(f"Malformed tool arguments: {tool_call['arguments']}")
-                    )
+                    yield {
+                        "type": "error",
+                        "content": "Malformed tool arguments:"
+                        f" {tool_call['arguments']}",
+                    }
                     conversation.add_tool_result(
                         tool_call["id"], "Error: malformed arguments"
                     )
                     continue
 
-                print("\n" + tool_call_msg(name, args))
+                yield {"type": "tool_call", "name": name, "args": args}
 
                 if name in TOOL_MAP:
                     result = TOOL_MAP[name].execute(**args)
                 else:
                     result = f"Error: tool '{name}' not found"
 
-                print(tool_result_msg(result))
+                yield {"type": "tool_result", "result": result}
 
                 conversation.add_tool_result(tool_call["id"], str(result))
+
+            yield {"type": "tool_end"}
 
     return run_agent

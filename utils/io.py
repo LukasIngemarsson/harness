@@ -6,7 +6,7 @@ def role_prefix(role: Role) -> str:
 
 
 def tool_call_msg(name: str, args: dict) -> str:
-    return f"[call] {name}({args})"
+    return f"\n[call] {name}({args})"
 
 
 def tool_result_msg(result: str) -> str:
