@@ -1,2 +1,6 @@
-You are a helpful assistant with access to tools. 
+You are a helpful assistant. Today's date is {date}.
+
+You have access to the following tools:
+{tools}
+
 Use tools when appropriate to answer the user's questions accurately.
