@@ -6,7 +6,7 @@ from config import API_KEY, BASE_URL, MODEL
 from memory.conversation import Conversation
 from tools import TOOLS
 from utils.enums import Role
-from utils.io import role_prefix, tool_call_msg, tool_result_msg
+from utils.io import error_msg, role_prefix, tool_call_msg, tool_result_msg
 
 client = OpenAI(base_url=BASE_URL, api_key=API_KEY)
 TOOL_DEFINITIONS = [tool.to_api_format() for tool in TOOLS]
@@ -17,13 +17,17 @@ def run_agent(conversation: Conversation, user_message: str) -> None:
     conversation.add_user_message(user_message)
 
     while True:
-        response = client.chat.completions.create(
-            model=MODEL,
-            messages=conversation.get_messages(),
-            tools=TOOL_DEFINITIONS,
-            tool_choice="auto",
-            stream=True,
-        )
+        try:
+            response = client.chat.completions.create(
+                model=MODEL,
+                messages=conversation.get_messages(),
+                tools=TOOL_DEFINITIONS,
+                tool_choice="auto",
+                stream=True,
+            )
+        except Exception as e:
+            print(error_msg(f"Failed to reach model: {e}"))
+            break
 
         content = ""
         tool_calls = {}
@@ -63,7 +67,12 @@ def run_agent(conversation: Conversation, user_message: str) -> None:
         })
         for tool_call in tool_calls.values():
             name = tool_call["name"]
-            args = json.loads(tool_call["arguments"])
+            try:
+                args = json.loads(tool_call["arguments"])
+            except json.JSONDecodeError:
+                print(error_msg(f"Malformed tool arguments: {tool_call['arguments']}"))
+                conversation.add_tool_result(tool_call["id"], "Error: malformed arguments")
+                continue
 
             print('\n' + tool_call_msg(name, args))
 
