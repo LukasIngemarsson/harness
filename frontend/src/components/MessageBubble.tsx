@@ -17,6 +17,14 @@ export function MessageBubble({ message }: Props) {
     );
   }
 
+  if (message.role === "system") {
+    return (
+      <div className="mx-auto w-full max-w-3xl">
+        <div className="text-xs text-gray-500 italic">{message.content}</div>
+      </div>
+    );
+  }
+
   if (message.role === "tool") {
     return (
       <div className="mx-auto w-full max-w-3xl">

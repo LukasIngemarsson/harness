@@ -30,6 +30,7 @@ def create_agent(config: dict) -> Callable[[Conversation, str], Iterator]:
                     tools=TOOL_DEFINITIONS,
                     tool_choice="auto",
                     stream=True,
+                    stream_options={"include_usage": True},
                 )
             except Exception as e:
                 logger.error("Failed to reach model: %s", e)
@@ -38,7 +39,16 @@ def create_agent(config: dict) -> Callable[[Conversation, str], Iterator]:
 
             content = ""
             tool_calls = {}
+            usage = None
             for chunk in response:
+                if chunk.usage:
+                    usage = {
+                        "prompt_tokens": chunk.usage.prompt_tokens,
+                        "completion_tokens": chunk.usage.completion_tokens,
+                        "total_tokens": chunk.usage.total_tokens,
+                    }
+                if not chunk.choices:
+                    continue
                 delta = chunk.choices[0].delta
                 if delta.content:
                     content += delta.content
@@ -57,7 +67,7 @@ def create_agent(config: dict) -> Callable[[Conversation, str], Iterator]:
                             )
 
             if not tool_calls:
-                yield {"type": "done"}
+                yield {"type": "done", "usage": usage}
                 break
 
             conversation.add_assistant_message(

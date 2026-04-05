@@ -3,6 +3,7 @@ import type { AgentEvent } from "../types";
 
 export function useSocket(onEvent: (event: AgentEvent) => void) {
   const wsRef = useRef<WebSocket | null>(null);
+  const connectRef = useRef<() => void>(() => {});
   const [connected, setConnected] = useState(false);
 
   useEffect(() => {
@@ -22,6 +23,7 @@ export function useSocket(onEvent: (event: AgentEvent) => void) {
       };
     }
 
+    connectRef.current = connect;
     connect();
     return () => wsRef.current?.close();
   }, [onEvent]);
@@ -30,5 +32,9 @@ export function useSocket(onEvent: (event: AgentEvent) => void) {
     wsRef.current?.send(JSON.stringify({ message: text }));
   }, []);
 
-  return { sendMessage, connected };
+  const reconnect = useCallback(() => {
+    wsRef.current?.close();
+  }, []);
+
+  return { sendMessage, connected, reconnect };
 }
