@@ -1,7 +1,11 @@
 from datetime import date
+from importlib.resources import files
 
 from tools import TOOLS
-from utils.file import load_prompt
+
+
+def load_prompt(package: str, filename: str) -> str:
+    return files(package).joinpath(filename).read_text()
 
 
 def build_system_prompt() -> str:
