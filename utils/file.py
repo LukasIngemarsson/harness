@@ -1,5 +1,5 @@
-from pathlib import Path
+from importlib.resources import files
 
 
-def load_prompt(filename: str) -> str:
-    return (Path(__file__).parent / "prompts" / filename).read_text()
+def load_prompt(package: str, filename: str) -> str:
+    return files(package).joinpath(filename).read_text()
