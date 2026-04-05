@@ -4,7 +4,10 @@ from tools.base import WORKSPACE_DIR, Tool
 
 class FileReadTool(Tool):
     name = "read_file"
-    description = "Reads and returns the contents of a file at the given path."
+    description = (
+        "Read the contents of a file in the workspace."
+        " Path is relative to the .workspace/ directory."
+    )
     parameters = {
         "type": "object",
         "properties": {

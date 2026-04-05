@@ -5,7 +5,7 @@ from tools.base import Tool
 
 class TimeTool(Tool):
     name = "get_current_time"
-    description = "Returns the current date and time."
+    description = "Get the current date and time. Returns YYYY-MM-DD HH:MM:SS format."
     parameters = {"type": "object", "properties": {}, "required": []}
 
     def execute(self, **kwargs: object) -> str:

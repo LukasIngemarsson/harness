@@ -3,7 +3,11 @@ from tools.base import Tool
 
 class CalculatorTool(Tool):
     name = "calculate"
-    description = "Performs basic arithmetic."
+    description = (
+        "Perform basic arithmetic on two numbers."
+        " Supports add, subtract, multiply, divide."
+        " For complex math, use python_eval instead."
+    )
     parameters = {
         "type": "object",
         "properties": {
