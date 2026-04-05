@@ -7,7 +7,7 @@ class Tool(ABC):
     parameters: dict
 
     @abstractmethod
-    def execute(self, **kwargs) -> str:
+    def execute(self, **kwargs: object) -> str:
         raise NotImplementedError
 
     def to_api_format(self) -> dict:

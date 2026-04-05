@@ -8,5 +8,5 @@ class TimeTool(Tool):
     description = "Returns the current date and time."
     parameters = {"type": "object", "properties": {}, "required": []}
 
-    def execute(self, **kwargs) -> str:
+    def execute(self, **kwargs: object) -> str:
         return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
