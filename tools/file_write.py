@@ -5,9 +5,9 @@ from tools.base import WORKSPACE_DIR, Tool
 class FileWriteTool(Tool):
     name = "write_file"
     description = (
-        "Write content to a file in the workspace."
-        " Path is relative to the .workspace/ directory."
-        " Creates parent directories if they don't exist."
+        "Write content to a file. Use the filename"
+        " directly (e.g. 'notes.txt')."
+        " Do NOT include '.workspace/' in the path."
     )
     parameters = {
         "type": "object",

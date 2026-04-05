@@ -17,9 +17,9 @@ TIMEOUT_SECONDS = 30
 class PythonEvalTool(Tool):
     name = "python_eval"
     description = (
-        "Execute Python code and return the output."
-        " Code runs in the .workspace/ directory."
-        " Use print() to produce output."
+        "Run Python code. You MUST use print()"
+        " to see output. You are already in the"
+        " workspace directory."
     )
     parameters = {
         "type": "object",
