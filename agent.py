@@ -23,7 +23,7 @@ def create_agent(config: dict) -> Callable[[Conversation, str], None]:
             try:
                 response = client.chat.completions.create(
                     model=model,
-                    messages=conversation.get_messages(),
+                    messages=conversation.messages,
                     tools=TOOL_DEFINITIONS,
                     tool_choice="auto",
                     stream=True,
