@@ -14,10 +14,10 @@ MAX_RESULTS = 5
 class WebSearchTool(Tool):
     name = "web_search"
     description = (
-        "Look up factual information using DuckDuckGo Instant Answers."
-        " Best for encyclopedia-style queries (people, places, concepts)."
-        " Does NOT return web page links or search results."
-        " For general web browsing, use python_eval with requests instead."
+        "Look up well-known topics that have a"
+        " Wikipedia article (people, places, concepts)."
+        " NOT a search engine — will fail for specific"
+        " or niche queries. Returns summaries only."
     )
     parameters = {
         "type": "object",

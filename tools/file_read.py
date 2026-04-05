@@ -5,8 +5,9 @@ from tools.base import WORKSPACE_DIR, Tool
 class FileReadTool(Tool):
     name = "read_file"
     description = (
-        "Read the contents of a file in the workspace."
-        " Path is relative to the .workspace/ directory."
+        "Read a file. Use the filename directly"
+        " (e.g. 'notes.txt')."
+        " Do NOT include '.workspace/' in the path."
     )
     parameters = {
         "type": "object",

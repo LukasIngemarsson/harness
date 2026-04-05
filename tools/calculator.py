@@ -4,9 +4,9 @@ from tools.base import Tool
 class CalculatorTool(Tool):
     name = "calculate"
     description = (
-        "Perform basic arithmetic on two numbers."
-        " Supports add, subtract, multiply, divide."
-        " For complex math, use python_eval instead."
+        "Basic arithmetic on two numbers"
+        " (add, subtract, multiply, divide)."
+        " For complex math use python_eval."
     )
     parameters = {
         "type": "object",
