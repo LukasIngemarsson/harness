@@ -26,6 +26,11 @@ class Conversation:
             {"role": Role.TOOL, "tool_call_id": tool_call_id, "content": content}
         )
 
+    @staticmethod
+    def clear_history(path: Path = HISTORY_PATH) -> None:
+        if path.exists():
+            path.unlink()
+
     def save(self, path: Path = HISTORY_PATH) -> None:
         path.write_text(json.dumps(self._messages, indent=2))
 
