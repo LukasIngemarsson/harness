@@ -29,6 +29,10 @@ class PlanTaskTool(Tool):
     def execute(self, goal: str, steps: list, **kwargs: object) -> str:
         task = get_task_store().create(goal, steps)
         step_list = "\n".join(
-            f"  {i + 1}. {s}" for i, s in enumerate(steps)
+            f"  {i}. {s}" for i, s in enumerate(steps)
         )
-        return f"Task {task.id} created:\n{step_list}"
+        return (
+            f"Task created. task_id={task.id}\n"
+            f"Steps (use step_index when calling update_task):\n"
+            f"{step_list}"
+        )

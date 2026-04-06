@@ -61,6 +61,11 @@ class TaskStore:
     def get(self, task_id: str) -> Task | None:
         return self._tasks.get(task_id)
 
+    def clear(self) -> None:
+        self._tasks.clear()
+        if self._path.exists():
+            self._path.unlink()
+
     def list_all(self) -> list[Task]:
         return list(self._tasks.values())
 

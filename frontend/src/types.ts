@@ -1,20 +1,48 @@
-type TokenEvent = { type: "token"; content: string };
-type ToolStartEvent = { type: "tool_start" };
+export enum EventType {
+  Token = "token",
+  ToolStart = "tool_start",
+  ToolCall = "tool_call",
+  ToolResult = "tool_result",
+  ToolEnd = "tool_end",
+  Error = "error",
+  Done = "done",
+  Cleared = "cleared",
+  TaskUpdate = "task_update",
+}
+
+export enum TaskStatus {
+  Pending = "pending",
+  InProgress = "in_progress",
+  Completed = "completed",
+  Failed = "failed",
+  Skipped = "skipped",
+}
+
+export enum MessageRole {
+  User = "user",
+  Assistant = "assistant",
+  System = "system",
+  Tool = "tool",
+}
+
+type TokenEvent = { type: EventType.Token; content: string };
+type ToolStartEvent = { type: EventType.ToolStart };
 type ToolCallEvent = {
-  type: "tool_call";
+  type: EventType.ToolCall;
   name: string;
   args: Record<string, unknown>;
 };
-type ToolResultEvent = { type: "tool_result"; result: string };
-type ToolEndEvent = { type: "tool_end" };
-type ErrorEvent = { type: "error"; content: string };
+type ToolResultEvent = { type: EventType.ToolResult; result: string };
+type ToolEndEvent = { type: EventType.ToolEnd };
+type ErrorEvent = { type: EventType.Error; content: string };
 type Usage = {
   prompt_tokens: number;
   completion_tokens: number;
   total_tokens: number;
 };
-type DoneEvent = { type: "done"; usage: Usage | null };
-type ClearedEvent = { type: "cleared" };
+type DoneEvent = { type: EventType.Done; usage: Usage | null };
+type ClearedEvent = { type: EventType.Cleared };
+type TaskUpdateEvent = { type: EventType.TaskUpdate; tasks: Task[] };
 
 export type AgentEvent =
   | TokenEvent
@@ -24,14 +52,21 @@ export type AgentEvent =
   | ToolEndEvent
   | ErrorEvent
   | DoneEvent
-  | ClearedEvent;
+  | ClearedEvent
+  | TaskUpdateEvent;
 
 export type ChatMessage =
-  | { role: "user"; content: string }
-  | { role: "assistant"; content: string; toolCalls?: ToolCall[] }
-  | { role: "tool"; calls: ToolCall[] }
-  | { role: "system"; content: string }
-  | { role: "task"; goal: string; steps: TaskStep[] };
+  | { role: MessageRole.User; content: string }
+  | { role: MessageRole.Assistant; content: string; toolCalls?: ToolCall[] }
+  | { role: MessageRole.Tool; calls: ToolCall[] }
+  | { role: MessageRole.System; content: string };
+
+export type Task = {
+  id: string;
+  goal: string;
+  status: string;
+  steps: TaskStep[];
+};
 
 export type TaskStep = {
   description: string;

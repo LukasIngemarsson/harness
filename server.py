@@ -8,13 +8,12 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from agent import create_agent
+from agent import create_agent, serialize_tasks
 from config import load_config
 from memory.conversation import Conversation
+from memory.task import get_task_store
 from prompts import build_system_prompt
-from tools.task_plan import PlanTaskTool
-from tools.task_update import UpdateTaskTool
-from utils.enums import Role, Status
+from utils.enums import Role
 from utils.log import setup_logging
 
 setup_logging()
@@ -76,45 +75,29 @@ def _convert_messages(messages: list[dict]) -> list[dict]:
                     fn = tc.get("function", {})
                     name = fn.get("name", "")
                     try:
-                        args = json.loads(fn.get("arguments", "{}"))
+                        args = json.loads(
+                            fn.get("arguments", "{}")
+                        )
                     except json.JSONDecodeError:
                         args = {}
                     call = {"name": name, "args": args}
                     calls.append(call)
                     tool_call_map[tc["id"]] = call
 
-                    if name == PlanTaskTool.name:
-                        steps = [
-                            {"description": s, "status": Status.PENDING}
-                            for s in (args.get("steps") or [])
-                        ]
-                        result.append({
-                            "role": "task",
-                            "goal": args.get("goal", ""),
-                            "steps": steps,
-                        })
-
                 result.append({"role": Role.TOOL, "calls": calls})
 
             content = msg.get("content")
             if content:
-                result.append({"role": Role.ASSISTANT, "content": content})
+                result.append(
+                    {"role": Role.ASSISTANT, "content": content}
+                )
 
         elif role == Role.TOOL:
             tc_id = msg.get("tool_call_id")
             if tc_id and tc_id in tool_call_map:
-                call = tool_call_map[tc_id]
-                call["result"] = msg.get("content", "")
-
-                if call["name"] == UpdateTaskTool.name:
-                    step_index = call["args"].get("step_index")
-                    status = call["args"].get("status", "")
-                    if step_index is not None:
-                        for m in result:
-                            if m.get("role") == "task":
-                                steps = m.get("steps", [])
-                                if 0 <= step_index < len(steps):
-                                    steps[step_index]["status"] = status
+                tool_call_map[tc_id]["result"] = msg.get(
+                    "content", ""
+                )
 
     return result
 
@@ -123,7 +106,11 @@ def _convert_messages(messages: list[dict]) -> list[dict]:
 async def history() -> dict:
     system_prompt = build_system_prompt()
     conversation = Conversation.load(system_prompt)
-    return {"messages": _convert_messages(conversation.messages)}
+    tasks = serialize_tasks(get_task_store().list_all())
+    return {
+        "messages": _convert_messages(conversation.messages),
+        "tasks": tasks,
+    }
 
 
 @app.websocket("/ws")
@@ -143,6 +130,7 @@ async def websocket_endpoint(ws: WebSocket) -> None:
 
             if message.lower() == "/clear":
                 Conversation.clear_history()
+                get_task_store().clear()
                 conversation = Conversation(system_prompt)
                 await ws.send_json({"type": "cleared"})
                 continue
