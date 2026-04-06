@@ -168,9 +168,9 @@ export default function App() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, busy]);
 
-  const activeTasks = Object.values(tasks).filter(
-    (t) => t.status !== "completed",
-  );
+  const activeTask = Object.values(tasks)
+    .filter((t) => t.status !== "completed")
+    .at(-1) ?? null;
 
   return (
     <div className="flex h-screen flex-col bg-gray-900 text-gray-200">
@@ -210,16 +210,13 @@ export default function App() {
         </div>
       </header>
 
-      {activeTasks.length > 0 && (
+      {activeTask && (
         <div className="border-b border-gray-700 px-5 py-3">
-          <div className="mx-auto flex max-w-3xl flex-col gap-2">
-            {activeTasks.map((task) => (
-              <TaskProgress
-                key={task.id}
-                goal={task.goal}
-                steps={task.steps}
-              />
-            ))}
+          <div className="mx-auto max-w-3xl">
+            <TaskProgress
+              goal={activeTask.goal}
+              steps={activeTask.steps}
+            />
           </div>
         </div>
       )}
