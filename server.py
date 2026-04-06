@@ -130,6 +130,7 @@ async def websocket_endpoint(ws: WebSocket) -> None:
 
             if message.lower() == "/clear":
                 Conversation.clear_history()
+                get_task_store().clear()
                 conversation = Conversation(system_prompt)
                 await ws.send_json({"type": "cleared"})
                 continue
