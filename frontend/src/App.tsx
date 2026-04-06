@@ -6,6 +6,9 @@ import { ChatInput } from "./components/ChatInput";
 import { ThinkingIndicator } from "./components/ThinkingIndicator";
 import { cn } from "./utils/cn";
 
+const TOOL_PLAN_TASK = "plan_task";
+const TOOL_UPDATE_TASK = "update_task";
+
 export default function App() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [busy, setBusy] = useState(false);
@@ -23,6 +26,13 @@ export default function App() {
         if (data.context_length) setContextLength(data.context_length);
       })
       .catch(() => setModel("unknown"));
+
+    fetch("/api/history")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.messages?.length) setMessages(data.messages);
+      })
+      .catch(() => {});
   }, []);
 
   const onEvent = useCallback((event: AgentEvent) => {
@@ -48,7 +58,7 @@ export default function App() {
         setMessages((prev) => {
           const last = prev[prev.length - 1];
 
-          if (event.name === "plan_task") {
+          if (event.name === TOOL_PLAN_TASK) {
             const steps: TaskStep[] = (
               (event.args.steps as string[]) || []
             ).map((s) => ({ description: s, status: "pending" }));
@@ -80,7 +90,7 @@ export default function App() {
           if (last?.role === "tool" && last.calls.length > 0) {
             const lastCall = last.calls[last.calls.length - 1];
 
-            if (lastCall.name === "update_task") {
+            if (lastCall.name === TOOL_UPDATE_TASK) {
               const stepIndex = lastCall.args.step_index as number;
               const status = lastCall.args.status as string;
               const updated = prev.map((msg) => {
