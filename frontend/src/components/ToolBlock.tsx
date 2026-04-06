@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { ToolCall } from "../types";
 import { cn } from "../utils/cn";
 
@@ -5,7 +6,16 @@ type Props = {
   call: ToolCall;
 };
 
+const PREVIEW_LINES = 3;
+
 export function ToolBlock({ call }: Props) {
+  const [expanded, setExpanded] = useState(false);
+
+  const result = call.result ?? "";
+  const lines = result.split("\n");
+  const isLong = lines.length > PREVIEW_LINES;
+  const preview = lines.slice(0, PREVIEW_LINES).join("\n");
+
   return (
     <div
       className={cn(
@@ -23,7 +33,22 @@ export function ToolBlock({ call }: Props) {
           <div className="mt-2 mb-1 text-xs text-gray-500 uppercase">
             Result
           </div>
-          <div className="whitespace-pre-wrap">{call.result}</div>
+          <div className="whitespace-pre-wrap">
+            {expanded || !isLong ? result : preview}
+          </div>
+          {isLong && (
+            <button
+              onClick={() => setExpanded(!expanded)}
+              className={cn(
+                "mt-1 text-xs text-gray-500",
+                "hover:text-gray-300",
+              )}
+            >
+              {expanded
+                ? "Show less"
+                : `... ${lines.length - PREVIEW_LINES} more lines`}
+            </button>
+          )}
         </>
       )}
     </div>

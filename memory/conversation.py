@@ -1,9 +1,8 @@
 import json
 from pathlib import Path
 
+from config import HISTORY_PATH
 from utils.enums import Role
-
-HISTORY_PATH = Path(__file__).parent / "history.json"
 
 
 class Conversation:

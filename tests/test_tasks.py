@@ -6,7 +6,11 @@ class TestTaskStore:
     def setup_method(self, tmp_path):
         self.store = TaskStore.__new__(TaskStore)
         self.store._tasks = {}
-        self.store._path = tmp_path / "tasks.json" if hasattr(tmp_path, 'name') else None
+        self.store._path = (
+            tmp_path / "tasks.json"
+            if hasattr(tmp_path, "name")
+            else None
+        )
 
     def _make_store(self, tmp_path):
         store = TaskStore(path=tmp_path / "tasks.json")

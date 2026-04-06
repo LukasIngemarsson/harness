@@ -4,9 +4,8 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
 
+from config import TASKS_PATH
 from utils.enums import Status
-
-TASKS_PATH = Path.cwd() / ".workspace" / "tasks.json"
 
 
 @dataclass

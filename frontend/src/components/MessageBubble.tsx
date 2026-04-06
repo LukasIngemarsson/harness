@@ -47,7 +47,7 @@ export function MessageBubble({ message }: Props) {
         <div className="mb-1 text-xs font-semibold text-green-400 uppercase">
           Assistant
         </div>
-        <div className="prose prose-invert prose-sm max-w-none">
+        <div className="prose prose-invert max-w-none">
           <Markdown remarkPlugins={[remarkGfm]}>{message.content}</Markdown>
         </div>
       </div>

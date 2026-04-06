@@ -1,8 +1,8 @@
 import logging
-from pathlib import Path
+
+from config import LOG_DIR
 
 LOG_FORMAT = "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
-LOG_DIR = Path(".logs")
 
 
 def setup_logging(filename: str | None = None) -> None:

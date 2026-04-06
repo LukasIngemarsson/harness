@@ -1,10 +1,19 @@
 import logging
 import os
 import sys
+from pathlib import Path
 
 from dotenv import load_dotenv
 
 logger = logging.getLogger(__name__)
+
+WORKSPACE_DIR = Path.cwd() / ".workspace"
+HISTORY_PATH = WORKSPACE_DIR / "history.json"
+TASKS_PATH = WORKSPACE_DIR / "tasks.json"
+MEMORY_PATH = WORKSPACE_DIR / "memory.md"
+LOG_DIR = Path.cwd() / ".logs"
+
+WORKSPACE_DIR.mkdir(exist_ok=True)
 
 REQUIRED_VARS = ["MODEL", "BASE_URL", "API_KEY"]
 
