@@ -1,12 +1,13 @@
-import type { ChatMessage } from "../types";
+import type { ChatMessage, Task } from "../types";
 import { TaskProgress } from "./TaskProgress";
 import { ToolBlock } from "./ToolBlock";
 
 type Props = {
   message: ChatMessage;
+  tasks: Record<string, Task>;
 };
 
-export function MessageBubble({ message }: Props) {
+export function MessageBubble({ message, tasks }: Props) {
   if (message.role === "user") {
     return (
       <div className="mx-auto w-full max-w-3xl">
@@ -27,9 +28,11 @@ export function MessageBubble({ message }: Props) {
   }
 
   if (message.role === "task") {
+    const task = tasks[message.taskId];
+    if (!task) return null;
     return (
       <div className="mx-auto w-full max-w-3xl">
-        <TaskProgress goal={message.goal} steps={message.steps} />
+        <TaskProgress goal={task.goal} steps={task.steps} />
       </div>
     );
   }

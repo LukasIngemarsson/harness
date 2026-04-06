@@ -15,6 +15,7 @@ type Usage = {
 };
 type DoneEvent = { type: "done"; usage: Usage | null };
 type ClearedEvent = { type: "cleared" };
+type TaskUpdateEvent = { type: "task_update"; tasks: Task[] };
 
 export type AgentEvent =
   | TokenEvent
@@ -24,14 +25,22 @@ export type AgentEvent =
   | ToolEndEvent
   | ErrorEvent
   | DoneEvent
-  | ClearedEvent;
+  | ClearedEvent
+  | TaskUpdateEvent;
 
 export type ChatMessage =
   | { role: "user"; content: string }
   | { role: "assistant"; content: string; toolCalls?: ToolCall[] }
   | { role: "tool"; calls: ToolCall[] }
   | { role: "system"; content: string }
-  | { role: "task"; goal: string; steps: TaskStep[] };
+  | { role: "task"; taskId: string };
+
+export type Task = {
+  id: string;
+  goal: string;
+  status: string;
+  steps: TaskStep[];
+};
 
 export type TaskStep = {
   description: string;

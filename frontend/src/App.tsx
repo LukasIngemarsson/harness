@@ -1,16 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { AgentEvent, ChatMessage, TaskStep, ToolCall } from "./types";
+import type { AgentEvent, ChatMessage, Task, ToolCall } from "./types";
 import { useSocket } from "./hooks/useSocket";
 import { MessageBubble } from "./components/MessageBubble";
 import { ChatInput } from "./components/ChatInput";
 import { ThinkingIndicator } from "./components/ThinkingIndicator";
 import { cn } from "./utils/cn";
 
-const TOOL_PLAN_TASK = "plan_task";
-const TOOL_UPDATE_TASK = "update_task";
-
 export default function App() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [tasks, setTasks] = useState<Record<string, Task>>({});
   const [busy, setBusy] = useState(false);
   const [busySince, setBusySince] = useState(0);
   const [model, setModel] = useState<string>("");
@@ -31,6 +29,20 @@ export default function App() {
       .then((r) => r.json())
       .then((data) => {
         if (data.messages?.length) setMessages(data.messages);
+        if (data.tasks?.length) {
+          const taskMap: Record<string, Task> = {};
+          for (const t of data.tasks) {
+            taskMap[t.id] = t;
+          }
+          setTasks(taskMap);
+          setMessages((prev) => [
+            ...prev,
+            ...data.tasks.map((t: Task) => ({
+              role: "task" as const,
+              taskId: t.id,
+            })),
+          ]);
+        }
       })
       .catch(() => {});
   }, []);
@@ -57,21 +69,6 @@ export default function App() {
       case "tool_call":
         setMessages((prev) => {
           const last = prev[prev.length - 1];
-
-          if (event.name === TOOL_PLAN_TASK) {
-            const steps: TaskStep[] = (
-              (event.args.steps as string[]) || []
-            ).map((s) => ({ description: s, status: "pending" }));
-            return [
-              ...prev,
-              {
-                role: "task" as const,
-                goal: (event.args.goal as string) || "",
-                steps,
-              },
-            ];
-          }
-
           if (last?.role === "tool") {
             const call: ToolCall = { name: event.name, args: event.args };
             return [
@@ -86,28 +83,7 @@ export default function App() {
       case "tool_result":
         setMessages((prev) => {
           const last = prev[prev.length - 1];
-
           if (last?.role === "tool" && last.calls.length > 0) {
-            const lastCall = last.calls[last.calls.length - 1];
-
-            if (lastCall.name === TOOL_UPDATE_TASK) {
-              const stepIndex = lastCall.args.step_index as number;
-              const status = lastCall.args.status as string;
-              const updated = prev.map((msg) => {
-                if (msg.role !== "task") return msg;
-                const steps = msg.steps.map((s, i) =>
-                  i === stepIndex ? { ...s, status } : s,
-                );
-                return { ...msg, steps };
-              });
-              const calls = [...last.calls];
-              calls[calls.length - 1] = {
-                ...calls[calls.length - 1],
-                result: event.result,
-              };
-              return [...updated.slice(0, -1), { ...last, calls }];
-            }
-
             const calls = [...last.calls];
             calls[calls.length - 1] = {
               ...calls[calls.length - 1],
@@ -116,6 +92,29 @@ export default function App() {
             return [...prev.slice(0, -1), { ...last, calls }];
           }
           return prev;
+        });
+        break;
+
+      case "task_update":
+        setTasks((prev) => {
+          const next = { ...prev };
+          for (const t of event.tasks) {
+            next[t.id] = t;
+          }
+          return next;
+        });
+        setMessages((prev) => {
+          const existingTaskIds = new Set(
+            prev
+              .filter((m) => m.role === "task")
+              .map((m) => (m as { role: "task"; taskId: string }).taskId),
+          );
+          const newTaskMessages = event.tasks
+            .filter((t) => !existingTaskIds.has(t.id))
+            .map((t) => ({ role: "task" as const, taskId: t.id }));
+          return newTaskMessages.length
+            ? [...prev, ...newTaskMessages]
+            : prev;
         });
         break;
 
@@ -136,6 +135,7 @@ export default function App() {
 
       case "cleared":
         setMessages([{ role: "system", content: "Conversation cleared." }]);
+        setTasks({});
         setTokenCount(null);
         setBusy(false);
         break;
@@ -212,7 +212,11 @@ export default function App() {
 
       <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-5">
         {messages.map((msg, i) => (
-          <MessageBubble key={i} message={msg} />
+          <MessageBubble
+            key={i}
+            message={msg}
+            tasks={tasks}
+          />
         ))}
         {busy && <ThinkingIndicator startTime={busySince} />}
         <div ref={bottomRef} />

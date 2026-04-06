@@ -5,8 +5,29 @@ from collections.abc import Callable, Iterator
 from openai import OpenAI
 
 from memory.conversation import Conversation
+from memory.task import Task, get_task_store
 from tools import TOOLS
+from tools.task_list import ListTasksTool
+from tools.task_plan import PlanTaskTool
+from tools.task_update import UpdateTaskTool
 from utils.enums import Role
+
+TASK_TOOL_NAMES = {PlanTaskTool.name, UpdateTaskTool.name, ListTasksTool.name}
+
+
+def serialize_tasks(tasks: list[Task]) -> list[dict]:
+    return [
+        {
+            "id": t.id,
+            "goal": t.goal,
+            "status": t.status,
+            "steps": [
+                {"description": s.description, "status": s.status}
+                for s in t.steps
+            ],
+        }
+        for t in tasks
+    ]
 
 logger = logging.getLogger(__name__)
 
@@ -118,6 +139,14 @@ def create_agent(config: dict) -> Callable[[Conversation, str], Iterator]:
                 yield {"type": "tool_result", "result": result}
 
                 conversation.add_tool_result(tool_call["id"], str(result))
+
+                if name in TASK_TOOL_NAMES:
+                    yield {
+                        "type": "task_update",
+                        "tasks": serialize_tasks(
+                            get_task_store().list_all()
+                        ),
+                    }
 
             yield {"type": "tool_end"}
 
