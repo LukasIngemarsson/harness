@@ -1,4 +1,5 @@
 import Markdown from "react-markdown";
+import rehypeHighlight from "rehype-highlight";
 import remarkGfm from "remark-gfm";
 import type { ChatMessage } from "../types";
 import { MessageRole } from "../types";
@@ -48,7 +49,12 @@ export function MessageBubble({ message }: Props) {
           Assistant
         </div>
         <div className="prose prose-invert max-w-none">
-          <Markdown remarkPlugins={[remarkGfm]}>{message.content}</Markdown>
+          <Markdown
+            remarkPlugins={[remarkGfm]}
+            rehypePlugins={[rehypeHighlight]}
+          >
+            {message.content}
+          </Markdown>
         </div>
       </div>
     );

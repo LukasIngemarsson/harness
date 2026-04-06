@@ -1,19 +1,33 @@
 # Harness
 
-Agentic AI framework using the OpenAI-compatible client library (currently targeting a local Ollama instance). Two interfaces: terminal REPL and web UI.
+Agentic AI framework using the OpenAI-compatible client library. Works with local models (Ollama) and cloud APIs (OpenAI). Two interfaces: terminal REPL and web UI.
 
 ## Project Structure
 
 - `main.py` — Terminal REPL entry point
 - `server.py` — FastAPI + WebSocket entry point for web UI
 - `agent.py` — Core agent loop, yields events via generator pattern
-- `config.py` — `load_config()` validates and loads env vars from `.env`
-- `memory/` — `Conversation` class with JSON persistence
-- `prompts/` — System prompt templating (`build_system_prompt`, `load_prompt`)
+- `config.py` — `load_config()` for env vars, all path constants
+- `memory/` — `Conversation` class with JSON persistence, `TaskStore` for task tracking
+- `prompts/` — System prompt templating with memory injection
 - `tools/` — Auto-discovered tools sandboxed to `.workspace/`
-- `utils/` — Enums (`Role`), I/O formatting, logging setup
-- `tests/` — pytest suite for tools and config
+- `utils/` — Enums (`Role`, `Status`), I/O formatting, logging setup
+- `tests/` — pytest suite for tools, config, and tasks
 - `frontend/` — Vite + React + TypeScript + Tailwind web UI
+
+## Tools
+
+Auto-discovered from `tools/`. Drop a `Tool` subclass in and it registers.
+
+- `calculate` — Basic arithmetic
+- `read_file` / `write_file` — File ops in `.workspace/`
+- `run_shell` — Allowlisted shell commands
+- `python_eval` — Unrestricted Python execution (local use only)
+- `web_search` — Google search via ddgs library
+- `read_url` — Fetch and extract text from any URL
+- `get_current_time` — Current date/time
+- `plan_task` / `update_task` / `list_tasks` — Task planning and tracking
+- `save_memory` / `read_memory` — Persistent agent memory
 
 ## Running
 
