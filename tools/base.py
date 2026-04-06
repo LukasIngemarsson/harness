@@ -1,8 +1,4 @@
 from abc import ABC, abstractmethod
-from pathlib import Path
-
-WORKSPACE_DIR = Path.cwd() / ".workspace"
-WORKSPACE_DIR.mkdir(exist_ok=True)
 
 
 class Tool(ABC):

@@ -1,7 +1,8 @@
 import shlex
 import subprocess
 
-from tools.base import WORKSPACE_DIR, Tool
+from config import WORKSPACE_DIR
+from tools.base import Tool
 
 TIMEOUT_SECONDS = 30
 ALLOWED_COMMANDS = {

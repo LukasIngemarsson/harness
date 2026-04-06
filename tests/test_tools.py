@@ -1,8 +1,7 @@
+from config import WORKSPACE_DIR
 from tools import TOOLS
-from tools.base import WORKSPACE_DIR
 from tools.calculator import CalculatorTool
-from tools.file_read import FileReadTool
-from tools.file_write import FileWriteTool
+from tools.file import FileReadTool, FileWriteTool
 from tools.shell import ShellTool
 
 

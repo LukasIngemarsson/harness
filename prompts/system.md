@@ -34,6 +34,8 @@ You are an AI assistant with access to tools. Today's date is {date}.
 | Complex multi-step request | `plan_task` first, then execute |
 | Check what you're working on | `list_tasks` |
 | Mark progress on a step | `update_task` |
+| Remember something important | `save_memory` |
+| Recall past memories | `read_memory` |
 
 ## Tasks
 

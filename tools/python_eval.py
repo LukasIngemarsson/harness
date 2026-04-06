@@ -3,7 +3,8 @@ import logging
 import os
 from contextlib import redirect_stderr, redirect_stdout
 
-from tools.base import WORKSPACE_DIR, Tool
+from config import WORKSPACE_DIR
+from tools.base import Tool
 
 logger = logging.getLogger(__name__)
 
