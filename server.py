@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 import urllib.request
+from pathlib import Path
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
@@ -11,6 +12,9 @@ from agent import create_agent
 from config import load_config
 from memory.conversation import Conversation
 from prompts import build_system_prompt
+from tools.task_plan import PlanTaskTool
+from tools.task_update import UpdateTaskTool
+from utils.enums import Role, Status
 from utils.log import setup_logging
 
 setup_logging()
@@ -20,7 +24,10 @@ config = load_config()
 run_agent = create_agent(config)
 
 app = FastAPI()
-app.mount("/assets", StaticFiles(directory="static/assets"), name="assets")
+
+static_dir = Path("static/assets")
+if static_dir.is_dir():
+    app.mount("/assets", StaticFiles(directory=static_dir), name="assets")
 
 
 @app.get("/")
@@ -46,6 +53,77 @@ async def info() -> dict:
         pass
 
     return {"model": config["model"], "context_length": context_length}
+
+
+def _convert_messages(messages: list[dict]) -> list[dict]:
+    result: list[dict] = []
+    tool_call_map: dict[str, dict] = {}
+
+    for msg in messages:
+        role = msg.get("role")
+
+        if role == Role.SYSTEM:
+            continue
+
+        if role == Role.USER:
+            result.append({"role": Role.USER, "content": msg["content"]})
+
+        elif role == Role.ASSISTANT:
+            tool_calls_raw = msg.get("tool_calls", [])
+            if tool_calls_raw:
+                calls = []
+                for tc in tool_calls_raw:
+                    fn = tc.get("function", {})
+                    name = fn.get("name", "")
+                    try:
+                        args = json.loads(fn.get("arguments", "{}"))
+                    except json.JSONDecodeError:
+                        args = {}
+                    call = {"name": name, "args": args}
+                    calls.append(call)
+                    tool_call_map[tc["id"]] = call
+
+                    if name == PlanTaskTool.name:
+                        steps = [
+                            {"description": s, "status": Status.PENDING}
+                            for s in (args.get("steps") or [])
+                        ]
+                        result.append({
+                            "role": "task",
+                            "goal": args.get("goal", ""),
+                            "steps": steps,
+                        })
+
+                result.append({"role": Role.TOOL, "calls": calls})
+
+            content = msg.get("content")
+            if content:
+                result.append({"role": Role.ASSISTANT, "content": content})
+
+        elif role == Role.TOOL:
+            tc_id = msg.get("tool_call_id")
+            if tc_id and tc_id in tool_call_map:
+                call = tool_call_map[tc_id]
+                call["result"] = msg.get("content", "")
+
+                if call["name"] == UpdateTaskTool.name:
+                    step_index = call["args"].get("step_index")
+                    status = call["args"].get("status", "")
+                    if step_index is not None:
+                        for m in result:
+                            if m.get("role") == "task":
+                                steps = m.get("steps", [])
+                                if 0 <= step_index < len(steps):
+                                    steps[step_index]["status"] = status
+
+    return result
+
+
+@app.get("/api/history")
+async def history() -> dict:
+    system_prompt = build_system_prompt()
+    conversation = Conversation.load(system_prompt)
+    return {"messages": _convert_messages(conversation.messages)}
 
 
 @app.websocket("/ws")

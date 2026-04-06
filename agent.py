@@ -107,7 +107,10 @@ def create_agent(config: dict) -> Callable[[Conversation, str], Iterator]:
                 yield {"type": "tool_call", "name": name, "args": args}
 
                 if name in TOOL_MAP:
-                    result = TOOL_MAP[name].execute(**args)
+                    try:
+                        result = TOOL_MAP[name].execute(**args)
+                    except TypeError as e:
+                        result = f"Error: {e}"
                 else:
                     result = f"Error: tool '{name}' not found"
 
