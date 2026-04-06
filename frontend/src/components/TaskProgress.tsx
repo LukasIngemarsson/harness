@@ -46,9 +46,7 @@ export function TaskProgress({ goal, steps }: Props) {
 
   return (
     <div
-      className={cn(
-        "rounded border border-gray-700 bg-gray-800/50 text-sm",
-      )}
+      className={cn("rounded border border-gray-700 bg-gray-800/50 text-sm")}
     >
       <button
         type="button"
@@ -68,9 +66,7 @@ export function TaskProgress({ goal, steps }: Props) {
         <div className="flex flex-col gap-1 px-3 pb-2">
           {steps.map((step, i) => (
             <div key={i} className="flex items-center gap-2">
-              <span
-                className={cn("w-4 text-center", statusColor(step.status))}
-              >
+              <span className={cn("w-4 text-center", statusColor(step.status))}>
                 {statusIcon(step.status)}
               </span>
               <span
