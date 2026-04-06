@@ -4,6 +4,7 @@ import { EventType, MessageRole } from "./types";
 import { useSocket } from "./hooks/useSocket";
 import { MessageBubble } from "./components/MessageBubble";
 import { ChatInput } from "./components/ChatInput";
+import { TaskProgress } from "./components/TaskProgress";
 import { ThinkingIndicator } from "./components/ThinkingIndicator";
 import { cn } from "./utils/cn";
 
@@ -36,13 +37,6 @@ export default function App() {
             taskMap[t.id] = t;
           }
           setTasks(taskMap);
-          setMessages((prev) => [
-            ...prev,
-            ...data.tasks.map((t: Task) => ({
-              role: MessageRole.Task,
-              taskId: t.id,
-            })),
-          ]);
         }
       })
       .catch(() => {});
@@ -110,19 +104,6 @@ export default function App() {
           }
           return next;
         });
-        setMessages((prev) => {
-          const existingTaskIds = new Set(
-            prev
-              .filter((m) => m.role === MessageRole.Task)
-              .map((m) => (m as { role: MessageRole.Task; taskId: string }).taskId),
-          );
-          const newTaskMessages = event.tasks
-            .filter((t) => !existingTaskIds.has(t.id))
-            .map((t) => ({ role: MessageRole.Task, taskId: t.id }));
-          return newTaskMessages.length
-            ? [...prev, ...newTaskMessages]
-            : prev;
-        });
         break;
 
       case EventType.Error:
@@ -187,6 +168,10 @@ export default function App() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, busy]);
 
+  const activeTasks = Object.values(tasks).filter(
+    (t) => t.status !== "completed",
+  );
+
   return (
     <div className="flex h-screen flex-col bg-gray-900 text-gray-200">
       <header
@@ -225,9 +210,23 @@ export default function App() {
         </div>
       </header>
 
+      {activeTasks.length > 0 && (
+        <div className="border-b border-gray-700 px-5 py-3">
+          <div className="mx-auto flex max-w-3xl flex-col gap-2">
+            {activeTasks.map((task) => (
+              <TaskProgress
+                key={task.id}
+                goal={task.goal}
+                steps={task.steps}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-5">
         {messages.map((msg, i) => (
-          <MessageBubble key={i} message={msg} tasks={tasks} />
+          <MessageBubble key={i} message={msg} />
         ))}
         {busy && <ThinkingIndicator startTime={busySince} />}
         <div ref={bottomRef} />

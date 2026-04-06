@@ -15,7 +15,6 @@ export enum MessageRole {
   Assistant = "assistant",
   System = "system",
   Tool = "tool",
-  Task = "task",
 }
 
 type TokenEvent = { type: EventType.Token; content: string };
@@ -52,8 +51,7 @@ export type ChatMessage =
   | { role: MessageRole.User; content: string }
   | { role: MessageRole.Assistant; content: string; toolCalls?: ToolCall[] }
   | { role: MessageRole.Tool; calls: ToolCall[] }
-  | { role: MessageRole.System; content: string }
-  | { role: MessageRole.Task; taskId: string };
+  | { role: MessageRole.System; content: string };
 
 export type Task = {
   id: string;
