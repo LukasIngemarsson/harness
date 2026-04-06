@@ -11,7 +11,7 @@ export function ToolBlock({ call }: Props) {
       className={cn(
         "my-2 rounded p-3",
         "border-l-3 border-gray-600 bg-gray-800",
-        "font-mono text-sm",
+        "font-mono text-sm break-all",
       )}
     >
       <div className="mb-1 text-xs text-gray-500 uppercase">Tool Call</div>
