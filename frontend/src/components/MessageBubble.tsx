@@ -1,3 +1,5 @@
+import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import type { ChatMessage } from "../types";
 import { MessageRole } from "../types";
 import { ToolBlock } from "./ToolBlock";
@@ -45,7 +47,9 @@ export function MessageBubble({ message }: Props) {
         <div className="mb-1 text-xs font-semibold text-green-400 uppercase">
           Assistant
         </div>
-        <div className="whitespace-pre-wrap">{message.content}</div>
+        <div className="prose prose-invert prose-sm max-w-none">
+          <Markdown remarkPlugins={[remarkGfm]}>{message.content}</Markdown>
+        </div>
       </div>
     );
   }
