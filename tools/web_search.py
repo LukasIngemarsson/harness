@@ -1,23 +1,23 @@
-import json
+# NOTE: Uses the ddgs metasearch library (Google backend).
+# Intended for personal/educational use only.
 import logging
-from urllib.parse import quote_plus
-from urllib.request import urlopen
+
+from ddgs import DDGS
 
 from tools.base import Tool
 
 logger = logging.getLogger(__name__)
 
-SEARCH_URL = "https://api.duckduckgo.com/?q={query}&format=json&no_html=1"
 MAX_RESULTS = 5
 
 
 class WebSearchTool(Tool):
     name = "web_search"
     description = (
-        "Look up well-known topics that have a"
-        " Wikipedia article (people, places, concepts)."
-        " NOT a search engine — will fail for specific"
-        " or niche queries. Returns summaries only."
+        "Search the web for any query. Returns titles,"
+        " snippets, and URLs from real search results."
+        " Use read_url to get full page content from"
+        " any of the returned URLs."
     )
     parameters = {
         "type": "object",
@@ -33,22 +33,20 @@ class WebSearchTool(Tool):
     def execute(self, query: str, **kwargs: object) -> str:
         logger.info("Searching: %s", query)
         try:
-            url = SEARCH_URL.format(query=quote_plus(query))
-            with urlopen(url, timeout=10) as resp:
-                data = json.loads(resp.read().decode())
+            results = DDGS().text(
+                query, max_results=MAX_RESULTS, backend="google"
+            )
         except Exception as e:
             return f"Error: search failed: {e}"
-
-        results = []
-
-        if data.get("Abstract"):
-            results.append(data["Abstract"])
-
-        for topic in data.get("RelatedTopics", [])[:MAX_RESULTS]:
-            if "Text" in topic:
-                results.append(topic["Text"])
 
         if not results:
             return "No results found."
 
-        return "\n\n".join(results)
+        lines = []
+        for r in results:
+            lines.append(r.get("title", ""))
+            lines.append(r.get("body", ""))
+            lines.append(f"URL: {r.get('href', '')}")
+            lines.append("")
+
+        return "\n".join(lines).strip()
