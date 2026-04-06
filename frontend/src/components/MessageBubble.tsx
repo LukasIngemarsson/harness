@@ -1,4 +1,5 @@
 import type { ChatMessage, Task } from "../types";
+import { MessageRole } from "../types";
 import { TaskProgress } from "./TaskProgress";
 import { ToolBlock } from "./ToolBlock";
 
@@ -8,7 +9,7 @@ type Props = {
 };
 
 export function MessageBubble({ message, tasks }: Props) {
-  if (message.role === "user") {
+  if (message.role === MessageRole.User) {
     return (
       <div className="mx-auto w-full max-w-3xl">
         <div className="mb-1 text-xs font-semibold text-blue-400 uppercase">
@@ -19,7 +20,7 @@ export function MessageBubble({ message, tasks }: Props) {
     );
   }
 
-  if (message.role === "system") {
+  if (message.role === MessageRole.System) {
     return (
       <div className="mx-auto w-full max-w-3xl">
         <div className="text-xs text-gray-500 italic">{message.content}</div>
@@ -27,7 +28,7 @@ export function MessageBubble({ message, tasks }: Props) {
     );
   }
 
-  if (message.role === "task") {
+  if (message.role === MessageRole.Task) {
     const task = tasks[message.taskId];
     if (!task) return null;
     return (
@@ -37,7 +38,7 @@ export function MessageBubble({ message, tasks }: Props) {
     );
   }
 
-  if (message.role === "tool") {
+  if (message.role === MessageRole.Tool) {
     return (
       <div className="mx-auto w-full max-w-3xl">
         <div className="mb-1 text-xs font-semibold text-gray-500 uppercase">

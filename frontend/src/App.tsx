@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { AgentEvent, ChatMessage, Task, ToolCall } from "./types";
+import { EventType, MessageRole } from "./types";
 import { useSocket } from "./hooks/useSocket";
 import { MessageBubble } from "./components/MessageBubble";
 import { ChatInput } from "./components/ChatInput";
@@ -38,7 +39,7 @@ export default function App() {
           setMessages((prev) => [
             ...prev,
             ...data.tasks.map((t: Task) => ({
-              role: "task" as const,
+              role: MessageRole.Task,
               taskId: t.id,
             })),
           ]);
@@ -49,27 +50,33 @@ export default function App() {
 
   const onEvent = useCallback((event: AgentEvent) => {
     switch (event.type) {
-      case "token":
+      case EventType.Token:
         setMessages((prev) => {
           const last = prev[prev.length - 1];
-          if (last?.role === "assistant") {
+          if (last?.role === MessageRole.Assistant) {
             return [
               ...prev.slice(0, -1),
               { ...last, content: last.content + event.content },
             ];
           }
-          return [...prev, { role: "assistant", content: event.content }];
+          return [
+            ...prev,
+            { role: MessageRole.Assistant, content: event.content },
+          ];
         });
         break;
 
-      case "tool_start":
-        setMessages((prev) => [...prev, { role: "tool", calls: [] }]);
+      case EventType.ToolStart:
+        setMessages((prev) => [
+          ...prev,
+          { role: MessageRole.Tool, calls: [] },
+        ]);
         break;
 
-      case "tool_call":
+      case EventType.ToolCall:
         setMessages((prev) => {
           const last = prev[prev.length - 1];
-          if (last?.role === "tool") {
+          if (last?.role === MessageRole.Tool) {
             const call: ToolCall = { name: event.name, args: event.args };
             return [
               ...prev.slice(0, -1),
@@ -80,10 +87,10 @@ export default function App() {
         });
         break;
 
-      case "tool_result":
+      case EventType.ToolResult:
         setMessages((prev) => {
           const last = prev[prev.length - 1];
-          if (last?.role === "tool" && last.calls.length > 0) {
+          if (last?.role === MessageRole.Tool && last.calls.length > 0) {
             const calls = [...last.calls];
             calls[calls.length - 1] = {
               ...calls[calls.length - 1],
@@ -95,7 +102,7 @@ export default function App() {
         });
         break;
 
-      case "task_update":
+      case EventType.TaskUpdate:
         setTasks((prev) => {
           const next = { ...prev };
           for (const t of event.tasks) {
@@ -106,35 +113,40 @@ export default function App() {
         setMessages((prev) => {
           const existingTaskIds = new Set(
             prev
-              .filter((m) => m.role === "task")
-              .map((m) => (m as { role: "task"; taskId: string }).taskId),
+              .filter((m) => m.role === MessageRole.Task)
+              .map((m) => (m as { role: MessageRole.Task; taskId: string }).taskId),
           );
           const newTaskMessages = event.tasks
             .filter((t) => !existingTaskIds.has(t.id))
-            .map((t) => ({ role: "task" as const, taskId: t.id }));
+            .map((t) => ({ role: MessageRole.Task, taskId: t.id }));
           return newTaskMessages.length
             ? [...prev, ...newTaskMessages]
             : prev;
         });
         break;
 
-      case "error":
+      case EventType.Error:
         setMessages((prev) => [
           ...prev,
-          { role: "assistant", content: `Error: ${event.content}` },
+          {
+            role: MessageRole.Assistant,
+            content: `Error: ${event.content}`,
+          },
         ]);
         setBusy(false);
         break;
 
-      case "done":
+      case EventType.Done:
         if (event.usage) {
           setTokenCount(event.usage.total_tokens);
         }
         setBusy(false);
         break;
 
-      case "cleared":
-        setMessages([{ role: "system", content: "Conversation cleared." }]);
+      case EventType.Cleared:
+        setMessages([
+          { role: MessageRole.System, content: "Conversation cleared." },
+        ]);
         setTasks({});
         setTokenCount(null);
         setBusy(false);
@@ -149,7 +161,10 @@ export default function App() {
       sendMessage(text);
       return;
     }
-    setMessages((prev) => [...prev, { role: "user", content: text }]);
+    setMessages((prev) => [
+      ...prev,
+      { role: MessageRole.User, content: text },
+    ]);
     sendMessage(text);
     setBusy(true);
     setBusySince(Date.now());
@@ -212,11 +227,7 @@ export default function App() {
 
       <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-5">
         {messages.map((msg, i) => (
-          <MessageBubble
-            key={i}
-            message={msg}
-            tasks={tasks}
-          />
+          <MessageBubble key={i} message={msg} tasks={tasks} />
         ))}
         {busy && <ThinkingIndicator startTime={busySince} />}
         <div ref={bottomRef} />
