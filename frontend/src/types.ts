@@ -30,7 +30,13 @@ export type ChatMessage =
   | { role: "user"; content: string }
   | { role: "assistant"; content: string; toolCalls?: ToolCall[] }
   | { role: "tool"; calls: ToolCall[] }
-  | { role: "system"; content: string };
+  | { role: "system"; content: string }
+  | { role: "task"; goal: string; steps: TaskStep[] };
+
+export type TaskStep = {
+  description: string;
+  status: string;
+};
 
 export type ToolCall = {
   name: string;

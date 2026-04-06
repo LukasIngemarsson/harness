@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { AgentEvent, ChatMessage, ToolCall } from "./types";
+import type { AgentEvent, ChatMessage, TaskStep, ToolCall } from "./types";
 import { useSocket } from "./hooks/useSocket";
 import { MessageBubble } from "./components/MessageBubble";
 import { ChatInput } from "./components/ChatInput";
@@ -47,6 +47,21 @@ export default function App() {
       case "tool_call":
         setMessages((prev) => {
           const last = prev[prev.length - 1];
+
+          if (event.name === "plan_task") {
+            const steps: TaskStep[] = (
+              (event.args.steps as string[]) || []
+            ).map((s) => ({ description: s, status: "pending" }));
+            return [
+              ...prev,
+              {
+                role: "task" as const,
+                goal: (event.args.goal as string) || "",
+                steps,
+              },
+            ];
+          }
+
           if (last?.role === "tool") {
             const call: ToolCall = { name: event.name, args: event.args };
             return [
@@ -61,7 +76,28 @@ export default function App() {
       case "tool_result":
         setMessages((prev) => {
           const last = prev[prev.length - 1];
+
           if (last?.role === "tool" && last.calls.length > 0) {
+            const lastCall = last.calls[last.calls.length - 1];
+
+            if (lastCall.name === "update_task") {
+              const stepIndex = lastCall.args.step_index as number;
+              const status = lastCall.args.status as string;
+              const updated = prev.map((msg) => {
+                if (msg.role !== "task") return msg;
+                const steps = msg.steps.map((s, i) =>
+                  i === stepIndex ? { ...s, status } : s,
+                );
+                return { ...msg, steps };
+              });
+              const calls = [...last.calls];
+              calls[calls.length - 1] = {
+                ...calls[calls.length - 1],
+                result: event.result,
+              };
+              return [...updated.slice(0, -1), { ...last, calls }];
+            }
+
             const calls = [...last.calls];
             calls[calls.length - 1] = {
               ...calls[calls.length - 1],
@@ -93,7 +129,6 @@ export default function App() {
         setTokenCount(null);
         setBusy(false);
         break;
-
     }
   }, []);
 
