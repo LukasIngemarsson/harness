@@ -88,6 +88,10 @@ def create_agent(config: dict) -> Callable[[Conversation, str], Iterator]:
                             )
 
             if not tool_calls:
+                if content:
+                    conversation.add_assistant_message(
+                        {"role": Role.ASSISTANT, "content": content}
+                    )
                 yield {"type": "done", "usage": usage}
                 break
 

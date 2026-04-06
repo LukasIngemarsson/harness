@@ -61,10 +61,7 @@ export default function App() {
         break;
 
       case EventType.ToolStart:
-        setMessages((prev) => [
-          ...prev,
-          { role: MessageRole.Tool, calls: [] },
-        ]);
+        setMessages((prev) => [...prev, { role: MessageRole.Tool, calls: [] }]);
         break;
 
       case EventType.ToolCall:
@@ -142,10 +139,7 @@ export default function App() {
       sendMessage(text);
       return;
     }
-    setMessages((prev) => [
-      ...prev,
-      { role: MessageRole.User, content: text },
-    ]);
+    setMessages((prev) => [...prev, { role: MessageRole.User, content: text }]);
     sendMessage(text);
     setBusy(true);
     setBusySince(Date.now());
@@ -168,9 +162,10 @@ export default function App() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, busy]);
 
-  const activeTask = Object.values(tasks)
-    .filter((t) => t.status !== TaskStatus.Completed)
-    .at(-1) ?? null;
+  const activeTask =
+    Object.values(tasks)
+      .filter((t) => t.status !== TaskStatus.Completed)
+      .at(-1) ?? null;
 
   return (
     <div className="flex h-screen flex-col bg-gray-900 text-gray-200">
@@ -213,10 +208,7 @@ export default function App() {
       {activeTask && (
         <div className="border-b border-gray-700 px-5 py-3">
           <div className="mx-auto max-w-3xl">
-            <TaskProgress
-              goal={activeTask.goal}
-              steps={activeTask.steps}
-            />
+            <TaskProgress goal={activeTask.goal} steps={activeTask.steps} />
           </div>
         </div>
       )}
