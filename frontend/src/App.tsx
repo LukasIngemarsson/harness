@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { AgentEvent, ChatMessage, Task, ToolCall } from "./types";
-import { EventType, MessageRole } from "./types";
+import { EventType, MessageRole, TaskStatus } from "./types";
 import { useSocket } from "./hooks/useSocket";
 import { MessageBubble } from "./components/MessageBubble";
 import { ChatInput } from "./components/ChatInput";
@@ -169,7 +169,7 @@ export default function App() {
   }, [messages, busy]);
 
   const activeTask = Object.values(tasks)
-    .filter((t) => t.status !== "completed")
+    .filter((t) => t.status !== TaskStatus.Completed)
     .at(-1) ?? null;
 
   return (

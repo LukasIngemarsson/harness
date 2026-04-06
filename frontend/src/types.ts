@@ -10,6 +10,14 @@ export enum EventType {
   TaskUpdate = "task_update",
 }
 
+export enum TaskStatus {
+  Pending = "pending",
+  InProgress = "in_progress",
+  Completed = "completed",
+  Failed = "failed",
+  Skipped = "skipped",
+}
+
 export enum MessageRole {
   User = "user",
   Assistant = "assistant",
