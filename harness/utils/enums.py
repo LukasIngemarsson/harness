@@ -6,6 +6,7 @@ class Role(StrEnum):
     ASSISTANT = "assistant"
     USER = "user"
     TOOL = "tool"
+    SUB_AGENT = "sub_agent"
 
 
 class Status(StrEnum):
@@ -27,6 +28,9 @@ class EventType(StrEnum):
     CLEARED = "cleared"
     TASK_UPDATE = "task_update"
     SYSTEM_MESSAGE = "system_message"
+    SUB_AGENT_START = "sub_agent_start"
+    SUB_AGENT_EVENT = "sub_agent_event"
+    SUB_AGENT_END = "sub_agent_end"
 
 
 class Command(StrEnum):

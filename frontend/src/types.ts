@@ -9,6 +9,9 @@ export enum EventType {
   Cleared = "cleared",
   TaskUpdate = "task_update",
   SystemMessage = "system_message",
+  SubAgentStart = "sub_agent_start",
+  SubAgentEvent = "sub_agent_event",
+  SubAgentEnd = "sub_agent_end",
 }
 
 export enum Command {
@@ -30,6 +33,7 @@ export enum MessageRole {
   Assistant = "assistant",
   System = "system",
   Tool = "tool",
+  SubAgent = "sub_agent",
 }
 
 type TokenEvent = { type: EventType.Token; content: string };
@@ -51,6 +55,16 @@ type DoneEvent = { type: EventType.Done; usage: Usage | null };
 type ClearedEvent = { type: EventType.Cleared };
 type TaskUpdateEvent = { type: EventType.TaskUpdate; tasks: Task[] };
 type SystemMessageEvent = { type: EventType.SystemMessage; content: string };
+type SubAgentStartEvent = {
+  type: EventType.SubAgentStart;
+  role: string;
+  task: string;
+};
+type SubAgentEventEvent = {
+  type: EventType.SubAgentEvent;
+  event: AgentEvent;
+};
+type SubAgentEndEvent = { type: EventType.SubAgentEnd; result: string };
 
 export type AgentEvent =
   | TokenEvent
@@ -62,13 +76,26 @@ export type AgentEvent =
   | DoneEvent
   | ClearedEvent
   | TaskUpdateEvent
-  | SystemMessageEvent;
+  | SystemMessageEvent
+  | SubAgentStartEvent
+  | SubAgentEventEvent
+  | SubAgentEndEvent;
+
+export type SubAgentMessage = {
+  role: MessageRole.SubAgent;
+  agentRole: string;
+  task: string;
+  tokens: string;
+  toolCalls: ToolCall[];
+  done: boolean;
+};
 
 export type ChatMessage =
   | { role: MessageRole.User; content: string }
   | { role: MessageRole.Assistant; content: string; toolCalls?: ToolCall[] }
   | { role: MessageRole.Tool; calls: ToolCall[] }
-  | { role: MessageRole.System; content: string };
+  | { role: MessageRole.System; content: string }
+  | SubAgentMessage;
 
 export type Task = {
   id: string;

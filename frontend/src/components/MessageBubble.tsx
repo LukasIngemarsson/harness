@@ -3,6 +3,7 @@ import rehypeHighlight from "rehype-highlight";
 import remarkGfm from "remark-gfm";
 import type { ChatMessage } from "../types";
 import { MessageRole } from "../types";
+import { SubAgentBlock } from "./SubAgentBlock";
 import { ToolBlock } from "./ToolBlock";
 
 type Props = {
@@ -25,6 +26,20 @@ export function MessageBubble({ message }: Props) {
     return (
       <div className="mx-auto w-full max-w-3xl">
         <div className="text-xs text-gray-500 italic">{message.content}</div>
+      </div>
+    );
+  }
+
+  if (message.role === MessageRole.SubAgent) {
+    return (
+      <div className="mx-auto w-full max-w-3xl">
+        <SubAgentBlock
+          role={message.agentRole}
+          task={message.task}
+          tokens={message.tokens}
+          toolCalls={message.toolCalls}
+          done={message.done}
+        />
       </div>
     );
   }
