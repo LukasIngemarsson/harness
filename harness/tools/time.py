@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from tools.base import Tool
+from harness.tools.base import Tool
 
 
 class TimeTool(Tool):

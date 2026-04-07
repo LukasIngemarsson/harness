@@ -1,6 +1,6 @@
-from memory.task import get_task_store
-from tools.base import Tool
-from utils.enums import Status
+from harness.memory.task import get_task_store
+from harness.tools.base import Tool
+from harness.utils.enums import Status
 
 
 class UpdateTaskTool(Tool):

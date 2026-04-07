@@ -1,10 +1,10 @@
-from agent import Agent
-from config import load_config
-from memory.conversation import Conversation
-from prompts import build_system_prompt, list_profiles
-from utils.enums import Command, Role
-from utils.io import error_msg, role_prefix, tool_call_msg, tool_result_msg
-from utils.log import setup_logging
+from harness.agent import Agent
+from harness.config import load_config
+from harness.memory.conversation import Conversation
+from harness.prompts import build_system_prompt, list_profiles
+from harness.utils.enums import Command, Role
+from harness.utils.io import error_msg, role_prefix, tool_call_msg, tool_result_msg
+from harness.utils.log import setup_logging
 
 
 def main() -> None:

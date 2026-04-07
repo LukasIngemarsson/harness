@@ -3,7 +3,7 @@ import re
 from html.parser import HTMLParser
 from urllib.request import Request, urlopen
 
-from tools.base import Tool
+from harness.tools.base import Tool
 
 logger = logging.getLogger(__name__)
 

@@ -1,5 +1,5 @@
-from memory.task import get_task_store
-from tools.base import Tool
+from harness.memory.task import get_task_store
+from harness.tools.base import Tool
 
 
 class PlanTaskTool(Tool):

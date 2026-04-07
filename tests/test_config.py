@@ -1,10 +1,10 @@
 import pytest
 
-from config import load_config
+from harness.config import load_config
 
 
 def test_missing_env_vars_exits(monkeypatch):
-    monkeypatch.setattr("config.load_dotenv", lambda: None)
+    monkeypatch.setattr("harness.config.load_dotenv", lambda: None)
     monkeypatch.delenv("MODEL", raising=False)
     monkeypatch.delenv("BASE_URL", raising=False)
     monkeypatch.delenv("API_KEY", raising=False)

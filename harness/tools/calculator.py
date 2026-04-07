@@ -1,4 +1,4 @@
-from tools.base import Tool
+from harness.tools.base import Tool
 
 
 class CalculatorTool(Tool):

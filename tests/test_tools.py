@@ -1,8 +1,8 @@
-from config import WORKSPACE_DIR
-from tools import TOOLS
-from tools.calculator import CalculatorTool
-from tools.file import FileReadTool, FileWriteTool
-from tools.shell import ShellTool
+from harness.config import WORKSPACE_DIR
+from harness.tools import TOOLS
+from harness.tools.calculator import CalculatorTool
+from harness.tools.file import FileReadTool, FileWriteTool
+from harness.tools.shell import ShellTool
 
 
 class TestCalculatorTool:
