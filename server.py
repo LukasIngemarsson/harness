@@ -8,25 +8,26 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from agent import create_agent, serialize_tasks
+from agent import Agent, serialize_tasks
 from config import load_config
 from memory.conversation import Conversation
 from memory.task import get_task_store
 from prompts import build_system_prompt
-from utils.enums import Role
+from utils.enums import EventType, Role
 from utils.log import setup_logging
 
 setup_logging()
 logger = logging.getLogger(__name__)
 
 config = load_config()
-run_agent = create_agent(config)
 
 app = FastAPI()
 
 static_dir = Path("static/assets")
 if static_dir.is_dir():
-    app.mount("/assets", StaticFiles(directory=static_dir), name="assets")
+    app.mount(
+        "/assets", StaticFiles(directory=static_dir), name="assets"
+    )
 
 
 @app.get("/")
@@ -65,7 +66,9 @@ def _convert_messages(messages: list[dict]) -> list[dict]:
             continue
 
         if role == Role.USER:
-            result.append({"role": Role.USER, "content": msg["content"]})
+            result.append(
+                {"role": Role.USER, "content": msg["content"]}
+            )
 
         elif role == Role.ASSISTANT:
             tool_calls_raw = msg.get("tool_calls", [])
@@ -119,6 +122,7 @@ async def websocket_endpoint(ws: WebSocket) -> None:
     logger.info("WebSocket connected")
     system_prompt = build_system_prompt()
     conversation = Conversation.load(system_prompt)
+    agent = Agent(config, conversation)
 
     try:
         while True:
@@ -132,10 +136,11 @@ async def websocket_endpoint(ws: WebSocket) -> None:
                 Conversation.clear_history()
                 get_task_store().clear()
                 conversation = Conversation(system_prompt)
-                await ws.send_json({"type": "cleared"})
+                agent = Agent(config, conversation)
+                await ws.send_json({"type": EventType.CLEARED})
                 continue
 
-            for event in run_agent(conversation, message):
+            for event in agent.run(message):
                 await ws.send_json(event)
                 await asyncio.sleep(0)
 

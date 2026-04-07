@@ -36,6 +36,7 @@ You are an AI assistant with access to tools. Today's date is {date}.
 | Mark progress on a step | `update_task` |
 | Remember something important | `save_memory` |
 | Recall past memories | `read_memory` |
+| Delegate a subtask | `spawn_agent` |
 
 ## Tasks
 
