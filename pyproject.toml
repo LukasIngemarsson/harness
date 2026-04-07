@@ -12,13 +12,21 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# Libraries available to the agent via python_eval
+agent = [
+    "beautifulsoup4",
+    "matplotlib",
+    "numpy",
+    "pandas",
+    "requests",
+]
 dev = [
     "pytest",
     "ruff",
 ]
 
 [tool.setuptools.packages.find]
-include = ["memory", "prompts", "tools", "utils"]
+include = ["memory", "prompts", "prompts.profiles", "tools", "utils"]
 
 [tool.ruff]
 line-length = 88

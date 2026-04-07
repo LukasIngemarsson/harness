@@ -54,6 +54,7 @@ Managed via `pyproject.toml`. Requires a `.env` file with `MODEL`, `BASE_URL`, a
 
 ```bash
 pip install .            # runtime deps (includes fastapi, uvicorn)
+pip install ".[agent]"   # + pandas, numpy, matplotlib, requests, bs4
 pip install ".[dev]"     # + ruff, pytest
 cd frontend && npm install  # frontend deps
 ```

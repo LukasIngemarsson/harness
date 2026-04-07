@@ -12,8 +12,8 @@ from agent import Agent, serialize_tasks
 from config import load_config
 from memory.conversation import Conversation
 from memory.task import get_task_store
-from prompts import build_system_prompt
-from utils.enums import EventType, Role
+from prompts import build_system_prompt, list_profiles
+from utils.enums import Command, EventType, Role
 from utils.log import setup_logging
 
 setup_logging()
@@ -132,12 +132,45 @@ async def websocket_endpoint(ws: WebSocket) -> None:
             if not message:
                 continue
 
-            if message.lower() == "/clear":
+            if message.lower() == Command.CLEAR:
                 Conversation.clear_history()
                 get_task_store().clear()
                 conversation = Conversation(system_prompt)
                 agent = Agent(config, conversation)
-                await ws.send_json({"type": EventType.CLEARED})
+                await ws.send_json(
+                    {"type": EventType.CLEARED}
+                )
+                continue
+
+            if message.lower().startswith(Command.MODE):
+                parts = message.split(maxsplit=1)
+                if len(parts) < 2:
+                    available = ", ".join(list_profiles())
+                    await ws.send_json({
+                        "type": EventType.SYSTEM_MESSAGE,
+                        "content": f"Available: {available}",
+                    })
+                    continue
+                profile_name = parts[1].strip().lower()
+                if profile_name not in list_profiles():
+                    available = ", ".join(list_profiles())
+                    await ws.send_json({
+                        "type": EventType.SYSTEM_MESSAGE,
+                        "content": f"Unknown profile"
+                        f" '{profile_name}'."
+                        f" Available: {available}",
+                    })
+                    continue
+                system_prompt = build_system_prompt(
+                    profile_name
+                )
+                conversation = Conversation(system_prompt)
+                agent = Agent(config, conversation)
+                await ws.send_json({
+                    "type": EventType.SYSTEM_MESSAGE,
+                    "content": f"Switched to"
+                    f" {profile_name} mode.",
+                })
                 continue
 
             for event in agent.run(message):

@@ -26,3 +26,10 @@ class EventType(StrEnum):
     DONE = "done"
     CLEARED = "cleared"
     TASK_UPDATE = "task_update"
+    SYSTEM_MESSAGE = "system_message"
+
+
+class Command(StrEnum):
+    CLEAR = "/clear"
+    MODE = "/mode"
+    EXIT = "exit"

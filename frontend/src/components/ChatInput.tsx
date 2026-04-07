@@ -1,13 +1,15 @@
 import { useState, useRef, useEffect } from "react";
+import { Command } from "../types";
 import { cn } from "../utils/cn";
 
-type Command = {
-  name: string;
+type CommandEntry = {
+  name: Command;
   description: string;
 };
 
-const COMMANDS: Command[] = [
-  { name: "/clear", description: "Clear conversation history" },
+const COMMANDS: CommandEntry[] = [
+  { name: Command.Clear, description: "Clear conversation history" },
+  { name: Command.Mode, description: "Switch agent profile (e.g. /mode researcher)" },
 ];
 
 type Props = {
@@ -41,7 +43,12 @@ export function ChatInput({ onSend, onCancel, busy, disabled }: Props) {
     setInput("");
   }
 
-  function selectCommand(cmd: Command) {
+  function selectCommand(cmd: CommandEntry) {
+    if (cmd.name === Command.Mode) {
+      setInput(`${Command.Mode} `);
+      inputRef.current?.focus();
+      return;
+    }
     onSend(cmd.name);
     setInput("");
     inputRef.current?.focus();
