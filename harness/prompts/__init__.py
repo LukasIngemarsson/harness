@@ -1,8 +1,8 @@
 from datetime import date
 from importlib.resources import files
 
-from config import MEMORY_PATH
-from tools import TOOLS
+from harness.config import MEMORY_PATH
+from harness.tools import TOOLS
 
 DEFAULT_PROFILE = "default"
 
@@ -21,7 +21,7 @@ def load_memory() -> str:
 
 
 def list_profiles() -> list[str]:
-    profiles_dir = files("prompts").joinpath("profiles")
+    profiles_dir = files("harness.prompts").joinpath("profiles")
     return sorted(
         p.name.removesuffix(".md")
         for p in profiles_dir.iterdir()
@@ -31,13 +31,13 @@ def list_profiles() -> list[str]:
 
 def load_profile(name: str) -> str:
     try:
-        return load_prompt("prompts.profiles", f"{name}.md")
+        return load_prompt("harness.prompts.profiles", f"{name}.md")
     except FileNotFoundError:
         return ""
 
 
 def build_system_prompt(profile: str = DEFAULT_PROFILE) -> str:
-    template = load_prompt("prompts", "system.md")
+    template = load_prompt("harness.prompts", "system.md")
     tool_list = "\n".join(
         f"- {tool.name}: {tool.description}" for tool in TOOLS
     )

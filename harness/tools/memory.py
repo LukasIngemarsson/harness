@@ -1,6 +1,6 @@
 
-from config import MEMORY_PATH
-from tools.base import Tool
+from harness.config import MEMORY_PATH
+from harness.tools.base import Tool
 
 
 class SaveMemoryTool(Tool):

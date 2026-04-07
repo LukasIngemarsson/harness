@@ -38,7 +38,7 @@ python main.py
 
 ### Web UI (development)
 ```bash
-uvicorn server:app --reload                  # backend (port 8000)
+python run_dev.py                            # backend (port 8000, auto-reload)
 cd frontend && npm run dev                   # frontend (port 5173, proxies to 8000)
 ```
 

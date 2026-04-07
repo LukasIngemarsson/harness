@@ -1,8 +1,8 @@
 import json
 from pathlib import Path
 
-from config import HISTORY_PATH
-from utils.enums import Role
+from harness.config import HISTORY_PATH
+from harness.utils.enums import Role
 
 
 class Conversation:

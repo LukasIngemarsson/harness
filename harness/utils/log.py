@@ -1,6 +1,6 @@
 import logging
 
-from config import LOG_DIR
+from harness.config import LOG_DIR
 
 LOG_FORMAT = "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
 

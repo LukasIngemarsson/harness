@@ -8,13 +8,13 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from agent import Agent, serialize_tasks
-from config import load_config
-from memory.conversation import Conversation
-from memory.task import get_task_store
-from prompts import build_system_prompt, list_profiles
-from utils.enums import Command, EventType, Role
-from utils.log import setup_logging
+from harness.agent import Agent, serialize_tasks
+from harness.config import load_config
+from harness.memory.conversation import Conversation
+from harness.memory.task import get_task_store
+from harness.prompts import build_system_prompt, list_profiles
+from harness.utils.enums import Command, EventType, Role
+from harness.utils.log import setup_logging
 
 setup_logging()
 logger = logging.getLogger(__name__)
@@ -179,4 +179,13 @@ async def websocket_endpoint(ws: WebSocket) -> None:
 
     except WebSocketDisconnect:
         logger.info("WebSocket disconnected")
+        conversation.save()
+    except Exception as e:
+        logger.error("WebSocket error: %s", e, exc_info=True)
+        try:
+            await ws.send_json(
+                {"type": EventType.ERROR, "content": str(e)}
+            )
+        except Exception:
+            pass
         conversation.save()

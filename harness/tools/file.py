@@ -1,5 +1,5 @@
-from config import WORKSPACE_DIR
-from tools.base import Tool
+from harness.config import WORKSPACE_DIR
+from harness.tools.base import Tool
 
 
 class FileReadTool(Tool):

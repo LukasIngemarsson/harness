@@ -4,7 +4,7 @@ import logging
 
 from ddgs import DDGS
 
-from tools.base import Tool
+from harness.tools.base import Tool
 
 logger = logging.getLogger(__name__)
 

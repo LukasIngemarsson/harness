@@ -1,8 +1,8 @@
 import shlex
 import subprocess
 
-from config import WORKSPACE_DIR
-from tools.base import Tool
+from harness.config import WORKSPACE_DIR
+from harness.tools.base import Tool
 
 TIMEOUT_SECONDS = 30
 ALLOWED_COMMANDS = {
@@ -16,6 +16,8 @@ ALLOWED_COMMANDS = {
     "wc",
     "sort",
     "pwd",
+    "python",
+    "python3",
 }
 
 
@@ -24,7 +26,10 @@ class ShellTool(Tool):
     description = (
         "Run a shell command. Allowed: ls, cat,"
         " echo, head, tail, grep, find, wc, sort,"
-        " pwd. For anything else use python_eval."
+        " pwd, python, python3."
+        " To run Python code, first save it with"
+        " write_file, then run: python3 script.py"
+        " For quick expressions: python3 -c 'print(1+1)'"
     )
     parameters = {
         "type": "object",

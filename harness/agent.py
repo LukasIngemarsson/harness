@@ -4,14 +4,14 @@ from collections.abc import Iterator
 
 from openai import OpenAI
 
-from memory.conversation import Conversation
-from memory.task import Task, get_task_store
-from tools import TOOLS
-from tools.sub_agent import SubAgentTool
-from tools.task_list import ListTasksTool
-from tools.task_plan import PlanTaskTool
-from tools.task_update import UpdateTaskTool
-from utils.enums import EventType, Role
+from harness.memory.conversation import Conversation
+from harness.memory.task import Task, get_task_store
+from harness.tools import TOOLS
+from harness.tools.sub_agent import SubAgentTool
+from harness.tools.task_list import ListTasksTool
+from harness.tools.task_plan import PlanTaskTool
+from harness.tools.task_update import UpdateTaskTool
+from harness.utils.enums import EventType, Role
 
 logger = logging.getLogger(__name__)
 
