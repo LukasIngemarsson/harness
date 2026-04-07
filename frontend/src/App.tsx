@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { AgentEvent, ChatMessage, Task, ToolCall } from "./types";
-import { EventType, MessageRole, TaskStatus } from "./types";
+import { Command, EventType, MessageRole, TaskStatus } from "./types";
 import { useSocket } from "./hooks/useSocket";
 import { MessageBubble } from "./components/MessageBubble";
 import { ChatInput } from "./components/ChatInput";
@@ -14,6 +14,7 @@ export default function App() {
   const [busy, setBusy] = useState(false);
   const [busySince, setBusySince] = useState(0);
   const [model, setModel] = useState<string>("");
+  const [profile, setProfile] = useState<string>("default");
   const [tokenCount, setTokenCount] = useState<number | null>(null);
   const [contextLength, setContextLength] = useState<number | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -129,13 +130,27 @@ export default function App() {
         setTokenCount(null);
         setBusy(false);
         break;
+
+      case EventType.SystemMessage:
+        setMessages((prev) => [
+          ...prev,
+          { role: MessageRole.System, content: event.content },
+        ]);
+        break;
     }
   }, []);
 
   const { sendMessage, connected, reconnect } = useSocket(onEvent);
 
   function handleSend(text: string) {
-    if (text.toLowerCase() === "/clear") {
+    if (text.toLowerCase() === Command.Clear) {
+      sendMessage(text);
+      setProfile("default");
+      return;
+    }
+    if (text.toLowerCase().startsWith(Command.Mode)) {
+      const parts = text.split(/\s+/, 2);
+      if (parts.length > 1) setProfile(parts[1].toLowerCase());
       sendMessage(text);
       return;
     }
@@ -175,7 +190,10 @@ export default function App() {
           "border-b border-gray-700 text-sm text-gray-500",
         )}
       >
-        <span>Harness</span>
+        <span>
+          Harness
+          <span className="ml-2 text-gray-600">/ {profile}</span>
+        </span>
         <div className="flex items-center gap-3">
           <span className="flex items-center gap-1 text-gray-500">
             <svg

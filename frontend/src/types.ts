@@ -8,6 +8,13 @@ export enum EventType {
   Done = "done",
   Cleared = "cleared",
   TaskUpdate = "task_update",
+  SystemMessage = "system_message",
+}
+
+export enum Command {
+  Clear = "/clear",
+  Mode = "/mode",
+  Exit = "exit", // not used in the UI, but needed to pass sync test
 }
 
 export enum TaskStatus {
@@ -43,6 +50,7 @@ type Usage = {
 type DoneEvent = { type: EventType.Done; usage: Usage | null };
 type ClearedEvent = { type: EventType.Cleared };
 type TaskUpdateEvent = { type: EventType.TaskUpdate; tasks: Task[] };
+type SystemMessageEvent = { type: EventType.SystemMessage; content: string };
 
 export type AgentEvent =
   | TokenEvent
@@ -53,7 +61,8 @@ export type AgentEvent =
   | ErrorEvent
   | DoneEvent
   | ClearedEvent
-  | TaskUpdateEvent;
+  | TaskUpdateEvent
+  | SystemMessageEvent;
 
 export type ChatMessage =
   | { role: MessageRole.User; content: string }

@@ -1,7 +1,7 @@
 import re
 from pathlib import Path
 
-from utils.enums import EventType, Role, Status
+from utils.enums import Command, EventType, Role, Status
 
 TYPES_TS = Path(__file__).parent.parent / "frontend" / "src" / "types.ts"
 
@@ -43,6 +43,16 @@ def test_status_sync():
     py_values = {e.value for e in Status}
     assert py_values == ts_values, (
         f"Status/TaskStatus mismatch.\n"
+        f"  Python only: {py_values - ts_values}\n"
+        f"  TypeScript only: {ts_values - py_values}"
+    )
+
+def test_command_sync():
+    ts = TYPES_TS.read_text()
+    ts_values = parse_ts_enum(ts, "Command")
+    py_values = {e.value for e in Command}
+    assert py_values == ts_values, (
+        f"Command mismatch.\n"
         f"  Python only: {py_values - ts_values}\n"
         f"  TypeScript only: {ts_values - py_values}"
     )
