@@ -14,3 +14,15 @@ class Status(StrEnum):
     COMPLETED = "completed"
     FAILED = "failed"
     SKIPPED = "skipped"
+
+
+class EventType(StrEnum):
+    TOKEN = "token"
+    TOOL_START = "tool_start"
+    TOOL_CALL = "tool_call"
+    TOOL_RESULT = "tool_result"
+    TOOL_END = "tool_end"
+    ERROR = "error"
+    DONE = "done"
+    CLEARED = "cleared"
+    TASK_UPDATE = "task_update"

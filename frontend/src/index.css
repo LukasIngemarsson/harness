@@ -5,3 +5,12 @@
 html {
   background-color: #111827;
 }
+
+.prose pre {
+  border: none;
+  background: #0d1117;
+}
+
+.prose code {
+  border: none;
+}

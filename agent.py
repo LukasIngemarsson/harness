@@ -1,18 +1,29 @@
 import json
 import logging
-from collections.abc import Callable, Iterator
+from collections.abc import Iterator
 
 from openai import OpenAI
 
 from memory.conversation import Conversation
 from memory.task import Task, get_task_store
 from tools import TOOLS
+from tools.sub_agent import SubAgentTool
 from tools.task_list import ListTasksTool
 from tools.task_plan import PlanTaskTool
 from tools.task_update import UpdateTaskTool
-from utils.enums import Role
+from utils.enums import EventType, Role
 
-TASK_TOOL_NAMES = {PlanTaskTool.name, UpdateTaskTool.name, ListTasksTool.name}
+logger = logging.getLogger(__name__)
+
+TOOL_DEFINITIONS = [tool.to_api_format() for tool in TOOLS]
+TOOL_MAP = {tool.name: tool for tool in TOOLS}
+TASK_TOOL_NAMES = {
+    PlanTaskTool.name,
+    UpdateTaskTool.name,
+    ListTasksTool.name,
+}
+
+MAX_ITERATIONS = 25
 
 
 def serialize_tasks(tasks: list[Task]) -> list[dict]:
@@ -29,25 +40,30 @@ def serialize_tasks(tasks: list[Task]) -> list[dict]:
         for t in tasks
     ]
 
-logger = logging.getLogger(__name__)
 
-TOOL_DEFINITIONS = [tool.to_api_format() for tool in TOOLS]
-TOOL_MAP = {tool.name: tool for tool in TOOLS}
+class Agent:
+    def __init__(
+        self,
+        config: dict,
+        conversation: Conversation,
+    ) -> None:
+        self.client = OpenAI(
+            base_url=config["base_url"],
+            api_key=config["api_key"],
+        )
+        self.model = config["model"]
+        self.config = config
+        self.conversation = conversation
 
+    def run(self, message: str) -> Iterator[dict]:
+        logger.info("User message: %s", message)
+        self.conversation.add_user_message(message)
 
-def create_agent(config: dict) -> Callable[[Conversation, str], Iterator]:
-    client = OpenAI(base_url=config["base_url"], api_key=config["api_key"])
-    model = config["model"]
-
-    def run_agent(conversation: Conversation, user_message: str) -> Iterator[dict]:
-        logger.info("User message: %s", user_message)
-        conversation.add_user_message(user_message)
-
-        while True:
+        for _ in range(MAX_ITERATIONS):
             try:
-                response = client.chat.completions.create(
-                    model=model,
-                    messages=conversation.messages,
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=self.conversation.messages,
                     tools=TOOL_DEFINITIONS,
                     tool_choice="auto",
                     stream=True,
@@ -55,7 +71,7 @@ def create_agent(config: dict) -> Callable[[Conversation, str], Iterator]:
                 )
             except Exception as e:
                 logger.error("Failed to reach model: %s", e)
-                yield {"type": "error", "content": str(e)}
+                yield {"type": EventType.ERROR, "content": str(e)}
                 break
 
             content = ""
@@ -73,85 +89,125 @@ def create_agent(config: dict) -> Callable[[Conversation, str], Iterator]:
                 delta = chunk.choices[0].delta
                 if delta.content:
                     content += delta.content
-                    yield {"type": "token", "content": delta.content}
+                    yield {"type": EventType.TOKEN, "content": delta.content}
                 if delta.tool_calls:
-                    for tool_call in delta.tool_calls:
-                        if tool_call.index not in tool_calls:
-                            tool_calls[tool_call.index] = {
-                                "id": tool_call.id,
-                                "name": tool_call.function.name,
+                    for tc in delta.tool_calls:
+                        if tc.index not in tool_calls:
+                            tool_calls[tc.index] = {
+                                "id": tc.id,
+                                "name": tc.function.name,
                                 "arguments": "",
                             }
-                        if tool_call.function.arguments:
-                            tool_calls[tool_call.index]["arguments"] += (
-                                tool_call.function.arguments
-                            )
+                        if tc.function.arguments:
+                            tool_calls[tc.index][
+                                "arguments"
+                            ] += tc.function.arguments
 
             if not tool_calls:
                 if content:
-                    conversation.add_assistant_message(
+                    self.conversation.add_assistant_message(
                         {"role": Role.ASSISTANT, "content": content}
                     )
-                yield {"type": "done", "usage": usage}
+                yield {"type": EventType.DONE, "usage": usage}
                 break
 
-            conversation.add_assistant_message(
-                {
-                    "role": Role.ASSISTANT,
-                    "content": content or None,
-                    "tool_calls": [
-                        {
-                            "id": tc["id"],
-                            "type": "function",
-                            "function": {
-                                "name": tc["name"],
-                                "arguments": tc["arguments"],
-                            },
-                        }
-                        for tc in tool_calls.values()
-                    ],
+            self._add_tool_call_message(content, tool_calls)
+            yield from self._execute_tool_calls(tool_calls)
+
+    def run_to_completion(self, message: str) -> str:
+        result = ""
+        for event in self.run(message):
+            if event["type"] == EventType.TOKEN:
+                result += event["content"]
+        return result or "(no output)"
+
+    def spawn(self, role: str, task: str) -> str:
+        logger.info("Spawning sub-agent: role=%s", role)
+        system_prompt = (
+            f"You are a {role}. Complete the following task"
+            " thoroughly and return your result.\n\n"
+            "You have access to tools. Use them as needed."
+            " You are in the .workspace/ directory."
+        )
+        child = Agent(
+            self.config, Conversation(system_prompt)
+        )
+        return child.run_to_completion(task)
+
+    def _add_tool_call_message(
+        self, content: str, tool_calls: dict
+    ) -> None:
+        self.conversation.add_assistant_message(
+            {
+                "role": Role.ASSISTANT,
+                "content": content or None,
+                "tool_calls": [
+                    {
+                        "id": tc["id"],
+                        "type": "function",
+                        "function": {
+                            "name": tc["name"],
+                            "arguments": tc["arguments"],
+                        },
+                    }
+                    for tc in tool_calls.values()
+                ],
+            }
+        )
+
+    def _execute_tool_calls(
+        self, tool_calls: dict
+    ) -> Iterator[dict]:
+        yield {"type": EventType.TOOL_START}
+
+        for tc in tool_calls.values():
+            name = tc["name"]
+            try:
+                args = json.loads(tc["arguments"])
+            except json.JSONDecodeError:
+                yield {
+                    "type": "error",
+                    "content": "Malformed tool arguments:"
+                    f" {tc['arguments']}",
                 }
+                self.conversation.add_tool_result(
+                    tc["id"], "Error: malformed arguments"
+                )
+                continue
+
+            logger.info("Tool call: %s(%s)", name, args)
+            yield {"type": EventType.TOOL_CALL, "name": name, "args": args}
+
+            result = self._execute_single_tool(name, args)
+
+            logger.info("Tool result: %s", result)
+            yield {"type": EventType.TOOL_RESULT, "result": result}
+
+            self.conversation.add_tool_result(
+                tc["id"], str(result)
             )
-            yield {"type": "tool_start"}
-            for tool_call in tool_calls.values():
-                name = tool_call["name"]
-                try:
-                    args = json.loads(tool_call["arguments"])
-                except json.JSONDecodeError:
-                    yield {
-                        "type": "error",
-                        "content": "Malformed tool arguments:"
-                        f" {tool_call['arguments']}",
-                    }
-                    conversation.add_tool_result(
-                        tool_call["id"], "Error: malformed arguments"
-                    )
-                    continue
 
-                logger.info("Tool call: %s(%s)", name, args)
-                yield {"type": "tool_call", "name": name, "args": args}
+            if name in TASK_TOOL_NAMES:
+                yield {
+                    "type": EventType.TASK_UPDATE,
+                    "tasks": serialize_tasks(
+                        get_task_store().list_all()
+                    ),
+                }
 
-                if name in TOOL_MAP:
-                    try:
-                        result = TOOL_MAP[name].execute(**args)
-                    except TypeError as e:
-                        result = f"Error: {e}"
-                else:
-                    result = f"Error: tool '{name}' not found"
+        yield {"type": EventType.TOOL_END}
 
-                logger.info("Tool result: %s", result)
-                yield {"type": "tool_result", "result": result}
-
-                conversation.add_tool_result(tool_call["id"], str(result))
-
-                if name in TASK_TOOL_NAMES:
-                    yield {
-                        "type": "task_update",
-                        "tasks": serialize_tasks(
-                            get_task_store().list_all()
-                        ),
-                    }
-
-            yield {"type": "tool_end"}
-
-    return run_agent
+    def _execute_single_tool(
+        self, name: str, args: dict
+    ) -> str:
+        if name == SubAgentTool.name:
+            return self.spawn(
+                role=args.get("role", Role.ASSISTANT),
+                task=args.get("task", ""),
+            )
+        if name in TOOL_MAP:
+            try:
+                return TOOL_MAP[name].execute(**args)
+            except TypeError as e:
+                return f"Error: {e}"
+        return f"Error: tool '{name}' not found"
