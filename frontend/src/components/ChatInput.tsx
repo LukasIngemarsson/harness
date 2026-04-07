@@ -9,7 +9,10 @@ type CommandEntry = {
 
 const COMMANDS: CommandEntry[] = [
   { name: Command.Clear, description: "Clear conversation history" },
-  { name: Command.Mode, description: "Switch agent profile (e.g. /mode researcher)" },
+  {
+    name: Command.Mode,
+    description: "Switch agent profile",
+  },
 ];
 
 type Props = {

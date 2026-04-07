@@ -121,7 +121,9 @@ class Agent:
                 result += event["content"]
         return result or "(no output)"
 
-    def spawn(self, role: str, task: str) -> str:
+    def spawn(
+        self, role: str, task: str
+    ) -> Iterator[dict]:
         logger.info("Spawning sub-agent: role=%s", role)
         system_prompt = (
             f"You are a {role}. Complete the following task"
@@ -132,7 +134,26 @@ class Agent:
         child = Agent(
             self.config, Conversation(system_prompt)
         )
-        return child.run_to_completion(task)
+
+        yield {
+            "type": EventType.SUB_AGENT_START,
+            "role": role,
+            "task": task,
+        }
+
+        result = ""
+        for event in child.run(task):
+            if event["type"] == EventType.TOKEN:
+                result += event["content"]
+            yield {
+                "type": EventType.SUB_AGENT_EVENT,
+                "event": event,
+            }
+
+        yield {
+            "type": EventType.SUB_AGENT_END,
+            "result": result or "(no output)",
+        }
 
     def _add_tool_call_message(
         self, content: str, tool_calls: dict
@@ -178,7 +199,17 @@ class Agent:
             logger.info("Tool call: %s(%s)", name, args)
             yield {"type": EventType.TOOL_CALL, "name": name, "args": args}
 
-            result = self._execute_single_tool(name, args)
+            if name == SubAgentTool.name:
+                result = ""
+                for sub_event in self.spawn(
+                    role=args.get("role", Role.ASSISTANT),
+                    task=args.get("task", ""),
+                ):
+                    if sub_event["type"] == EventType.SUB_AGENT_END:
+                        result = sub_event["result"]
+                    yield sub_event
+            else:
+                result = self._execute_single_tool(name, args)
 
             logger.info("Tool result: %s", result)
             yield {"type": EventType.TOOL_RESULT, "result": result}
@@ -200,11 +231,6 @@ class Agent:
     def _execute_single_tool(
         self, name: str, args: dict
     ) -> str:
-        if name == SubAgentTool.name:
-            return self.spawn(
-                role=args.get("role", Role.ASSISTANT),
-                task=args.get("task", ""),
-            )
         if name in TOOL_MAP:
             try:
                 return TOOL_MAP[name].execute(**args)

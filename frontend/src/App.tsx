@@ -137,6 +137,56 @@ export default function App() {
           { role: MessageRole.System, content: event.content },
         ]);
         break;
+
+      case EventType.SubAgentStart:
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: MessageRole.SubAgent,
+            agentRole: event.role,
+            task: event.task,
+            tokens: "",
+            toolCalls: [],
+            done: false,
+          },
+        ]);
+        break;
+
+      case EventType.SubAgentEvent: {
+        const inner = event.event;
+        setMessages((prev) => {
+          const last = prev[prev.length - 1];
+          if (last?.role !== MessageRole.SubAgent) return prev;
+          const updated = { ...last };
+          if (inner.type === EventType.Token) {
+            updated.tokens += inner.content;
+          } else if (inner.type === EventType.ToolCall) {
+            updated.toolCalls = [
+              ...updated.toolCalls,
+              { name: inner.name, args: inner.args },
+            ];
+          } else if (inner.type === EventType.ToolResult) {
+            const calls = [...updated.toolCalls];
+            if (calls.length > 0) {
+              calls[calls.length - 1] = {
+                ...calls[calls.length - 1],
+                result: inner.result,
+              };
+            }
+            updated.toolCalls = calls;
+          }
+          return [...prev.slice(0, -1), updated];
+        });
+        break;
+      }
+
+      case EventType.SubAgentEnd:
+        setMessages((prev) => {
+          const last = prev[prev.length - 1];
+          if (last?.role !== MessageRole.SubAgent) return prev;
+          return [...prev.slice(0, -1), { ...last, done: true }];
+        });
+        break;
     }
   }, []);
 

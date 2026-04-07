@@ -1,5 +1,3 @@
-"""Development server with reload, excluding .workspace/ from file watcher."""
-
 import uvicorn
 
 if __name__ == "__main__":
