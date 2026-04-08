@@ -10,7 +10,7 @@ export enum EventType {
   TaskUpdate = "task_update",
   SystemMessage = "system_message",
   SubAgentStart = "sub_agent_start",
-  SubAgentEvent = "sub_agent_event",
+  SubAgentUpdate = "sub_agent_update",
   SubAgentEnd = "sub_agent_end",
 }
 
@@ -61,8 +61,8 @@ type SubAgentStartEvent = {
   role: string;
   task: string;
 };
-type SubAgentEventEvent = {
-  type: EventType.SubAgentEvent;
+type SubAgentUpdateEvent = {
+  type: EventType.SubAgentUpdate;
   agent_id: string;
   event: AgentEvent;
 };
@@ -84,7 +84,7 @@ export type AgentEvent =
   | TaskUpdateEvent
   | SystemMessageEvent
   | SubAgentStartEvent
-  | SubAgentEventEvent
+  | SubAgentUpdateEvent
   | SubAgentEndEvent;
 
 export type SubAgentMessage = {

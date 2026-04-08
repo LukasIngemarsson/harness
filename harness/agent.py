@@ -158,7 +158,7 @@ class Agent:
             if event["type"] == EventType.TOKEN:
                 result += event["content"]
             yield {
-                "type": EventType.SUB_AGENT_EVENT,
+                "type": EventType.SUB_AGENT_UPDATE,
                 "agent_id": agent_id,
                 "event": event,
             }
