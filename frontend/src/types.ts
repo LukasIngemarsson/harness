@@ -57,14 +57,20 @@ type TaskUpdateEvent = { type: EventType.TaskUpdate; tasks: Task[] };
 type SystemMessageEvent = { type: EventType.SystemMessage; content: string };
 type SubAgentStartEvent = {
   type: EventType.SubAgentStart;
+  agent_id: string;
   role: string;
   task: string;
 };
 type SubAgentEventEvent = {
   type: EventType.SubAgentEvent;
+  agent_id: string;
   event: AgentEvent;
 };
-type SubAgentEndEvent = { type: EventType.SubAgentEnd; result: string };
+type SubAgentEndEvent = {
+  type: EventType.SubAgentEnd;
+  agent_id: string;
+  result: string;
+};
 
 export type AgentEvent =
   | TokenEvent
@@ -83,6 +89,7 @@ export type AgentEvent =
 
 export type SubAgentMessage = {
   role: MessageRole.SubAgent;
+  agentId: string;
   agentRole: string;
   task: string;
   tokens: string;

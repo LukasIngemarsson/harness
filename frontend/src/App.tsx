@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { AgentEvent, ChatMessage, Task, ToolCall } from "./types";
+import type {
+  AgentEvent,
+  ChatMessage,
+  SubAgentMessage,
+  Task,
+  ToolCall,
+} from "./types";
 import { Command, EventType, MessageRole, TaskStatus } from "./types";
 import { useSocket } from "./hooks/useSocket";
 import { MessageBubble } from "./components/MessageBubble";
@@ -143,6 +149,7 @@ export default function App() {
           ...prev,
           {
             role: MessageRole.SubAgent,
+            agentId: event.agent_id,
             agentRole: event.role,
             task: event.task,
             tokens: "",
@@ -155,9 +162,13 @@ export default function App() {
       case EventType.SubAgentEvent: {
         const inner = event.event;
         setMessages((prev) => {
-          const last = prev[prev.length - 1];
-          if (last?.role !== MessageRole.SubAgent) return prev;
-          const updated = { ...last };
+          const idx = prev.findLastIndex(
+            (m) =>
+              m.role === MessageRole.SubAgent && m.agentId === event.agent_id,
+          );
+          if (idx === -1) return prev;
+          const msg = prev[idx] as SubAgentMessage;
+          const updated = { ...msg };
           if (inner.type === EventType.Token) {
             updated.tokens += inner.content;
           } else if (inner.type === EventType.ToolCall) {
@@ -175,16 +186,24 @@ export default function App() {
             }
             updated.toolCalls = calls;
           }
-          return [...prev.slice(0, -1), updated];
+          return [...prev.slice(0, idx), updated, ...prev.slice(idx + 1)];
         });
         break;
       }
 
       case EventType.SubAgentEnd:
         setMessages((prev) => {
-          const last = prev[prev.length - 1];
-          if (last?.role !== MessageRole.SubAgent) return prev;
-          return [...prev.slice(0, -1), { ...last, done: true }];
+          const idx = prev.findLastIndex(
+            (m) =>
+              m.role === MessageRole.SubAgent && m.agentId === event.agent_id,
+          );
+          if (idx === -1) return prev;
+          const msg = prev[idx] as SubAgentMessage;
+          return [
+            ...prev.slice(0, idx),
+            { ...msg, done: true },
+            ...prev.slice(idx + 1),
+          ];
         });
         break;
     }
