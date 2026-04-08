@@ -1,6 +1,9 @@
 import json
 import logging
+import uuid
 from collections.abc import Iterator
+from queue import Queue
+from threading import Thread
 
 from openai import OpenAI
 
@@ -89,7 +92,10 @@ class Agent:
                 delta = chunk.choices[0].delta
                 if delta.content:
                     content += delta.content
-                    yield {"type": EventType.TOKEN, "content": delta.content}
+                    yield {
+                        "type": EventType.TOKEN,
+                        "content": delta.content,
+                    }
                 if delta.tool_calls:
                     for tc in delta.tool_calls:
                         if tc.index not in tool_calls:
@@ -106,7 +112,10 @@ class Agent:
             if not tool_calls:
                 if content:
                     self.conversation.add_assistant_message(
-                        {"role": Role.ASSISTANT, "content": content}
+                        {
+                            "role": Role.ASSISTANT,
+                            "content": content,
+                        }
                     )
                 yield {"type": EventType.DONE, "usage": usage}
                 break
@@ -122,9 +131,11 @@ class Agent:
         return result or "(no output)"
 
     def spawn(
-        self, role: str, task: str
+        self, role: str, task: str, agent_id: str
     ) -> Iterator[dict]:
-        logger.info("Spawning sub-agent: role=%s", role)
+        logger.info(
+            "Spawning sub-agent %s: role=%s", agent_id, role
+        )
         system_prompt = (
             f"You are a {role}. Complete the following task"
             " thoroughly and return your result.\n\n"
@@ -137,6 +148,7 @@ class Agent:
 
         yield {
             "type": EventType.SUB_AGENT_START,
+            "agent_id": agent_id,
             "role": role,
             "task": task,
         }
@@ -147,11 +159,13 @@ class Agent:
                 result += event["content"]
             yield {
                 "type": EventType.SUB_AGENT_EVENT,
+                "agent_id": agent_id,
                 "event": event,
             }
 
         yield {
             "type": EventType.SUB_AGENT_END,
+            "agent_id": agent_id,
             "result": result or "(no output)",
         }
 
@@ -181,13 +195,16 @@ class Agent:
     ) -> Iterator[dict]:
         yield {"type": EventType.TOOL_START}
 
-        for tc in tool_calls.values():
-            name = tc["name"]
+        # Separate spawn calls from regular tool calls
+        spawn_calls = {}
+        regular_calls = {}
+        for idx, tc in tool_calls.items():
             try:
+                name = tc["name"]
                 args = json.loads(tc["arguments"])
             except json.JSONDecodeError:
                 yield {
-                    "type": "error",
+                    "type": EventType.ERROR,
                     "content": "Malformed tool arguments:"
                     f" {tc['arguments']}",
                 }
@@ -196,23 +213,28 @@ class Agent:
                 )
                 continue
 
-            logger.info("Tool call: %s(%s)", name, args)
-            yield {"type": EventType.TOOL_CALL, "name": name, "args": args}
-
             if name == SubAgentTool.name:
-                result = ""
-                for sub_event in self.spawn(
-                    role=args.get("role", Role.ASSISTANT),
-                    task=args.get("task", ""),
-                ):
-                    if sub_event["type"] == EventType.SUB_AGENT_END:
-                        result = sub_event["result"]
-                    yield sub_event
+                spawn_calls[idx] = (tc, args)
             else:
-                result = self._execute_single_tool(name, args)
+                regular_calls[idx] = (tc, args)
+
+        # Execute regular tools sequentially
+        for tc, args in regular_calls.values():
+            name = tc["name"]
+            logger.info("Tool call: %s(%s)", name, args)
+            yield {
+                "type": EventType.TOOL_CALL,
+                "name": name,
+                "args": args,
+            }
+
+            result = self._execute_single_tool(name, args)
 
             logger.info("Tool result: %s", result)
-            yield {"type": EventType.TOOL_RESULT, "result": result}
+            yield {
+                "type": EventType.TOOL_RESULT,
+                "result": result,
+            }
 
             self.conversation.add_tool_result(
                 tc["id"], str(result)
@@ -226,7 +248,126 @@ class Agent:
                     ),
                 }
 
+        # Execute spawn calls in parallel
+        if spawn_calls:
+            yield from self._execute_parallel_spawns(
+                spawn_calls
+            )
+
         yield {"type": EventType.TOOL_END}
+
+    def _execute_parallel_spawns(
+        self, spawn_calls: dict
+    ) -> Iterator[dict]:
+        if len(spawn_calls) == 1:
+            # Single spawn — no threading needed
+            tc, args = next(iter(spawn_calls.values()))
+            agent_id = uuid.uuid4().hex[:8]
+
+            logger.info("Tool call: %s(%s)", tc["name"], args)
+            yield {
+                "type": EventType.TOOL_CALL,
+                "name": tc["name"],
+                "args": args,
+            }
+
+            result = ""
+            for sub_event in self.spawn(
+                role=args.get("role", Role.ASSISTANT),
+                task=args.get("task", ""),
+                agent_id=agent_id,
+            ):
+                if sub_event["type"] == EventType.SUB_AGENT_END:
+                    result = sub_event["result"]
+                yield sub_event
+
+            self.conversation.add_tool_result(
+                tc["id"], str(result)
+            )
+            yield {
+                "type": EventType.TOOL_RESULT,
+                "result": result,
+            }
+            return
+
+        # Multiple spawns — run in parallel threads
+        queue: Queue = Queue()
+
+        def _run_spawn(
+            tc: dict, args: dict, agent_id: str
+        ) -> None:
+            try:
+                result = ""
+                for sub_event in self.spawn(
+                    role=args.get("role", Role.ASSISTANT),
+                    task=args.get("task", ""),
+                    agent_id=agent_id,
+                ):
+                    if (
+                        sub_event["type"]
+                        == EventType.SUB_AGENT_END
+                    ):
+                        result = sub_event["result"]
+                    queue.put(sub_event)
+                queue.put(
+                    {
+                        "_done": True,
+                        "agent_id": agent_id,
+                        "tc_id": tc["id"],
+                        "result": result,
+                    }
+                )
+            except Exception as e:
+                queue.put(
+                    {
+                        "_done": True,
+                        "agent_id": agent_id,
+                        "tc_id": tc["id"],
+                        "result": f"Error: {e}",
+                    }
+                )
+
+        threads = []
+        agent_ids = {}
+        for tc, args in spawn_calls.values():
+            agent_id = uuid.uuid4().hex[:8]
+            agent_ids[agent_id] = tc
+
+            logger.info("Tool call: %s(%s)", tc["name"], args)
+            yield {
+                "type": EventType.TOOL_CALL,
+                "name": tc["name"],
+                "args": args,
+            }
+
+            t = Thread(
+                target=_run_spawn,
+                args=(tc, args, agent_id),
+                daemon=True,
+            )
+            threads.append(t)
+            t.start()
+
+        # Collect events from all threads
+        done_count = 0
+        total = len(threads)
+        while done_count < total:
+            event = queue.get()
+            if event.get("_done"):
+                done_count += 1
+                tc = agent_ids[event["agent_id"]]
+                self.conversation.add_tool_result(
+                    tc["id"], str(event["result"])
+                )
+                yield {
+                    "type": EventType.TOOL_RESULT,
+                    "result": event["result"],
+                }
+            else:
+                yield event
+
+        for t in threads:
+            t.join()
 
     def _execute_single_tool(
         self, name: str, args: dict
