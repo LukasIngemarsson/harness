@@ -29,7 +29,7 @@ class EventType(StrEnum):
     TASK_UPDATE = "task_update"
     SYSTEM_MESSAGE = "system_message"
     SUB_AGENT_START = "sub_agent_start"
-    SUB_AGENT_EVENT = "sub_agent_event"
+    SUB_AGENT_UPDATE = "sub_agent_update"
     SUB_AGENT_END = "sub_agent_end"
 
 

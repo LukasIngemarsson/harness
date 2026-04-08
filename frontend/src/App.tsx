@@ -24,6 +24,7 @@ export default function App() {
   const [tokenCount, setTokenCount] = useState<number | null>(null);
   const [contextLength, setContextLength] = useState<number | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const chatRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetch("/api/info")
@@ -159,7 +160,7 @@ export default function App() {
         ]);
         break;
 
-      case EventType.SubAgentEvent: {
+      case EventType.SubAgentUpdate: {
         const inner = event.event;
         setMessages((prev) => {
           const idx = prev.findLastIndex(
@@ -242,9 +243,26 @@ export default function App() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [busy]);
 
+  const userScrolledRef = useRef(false);
+
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, busy]);
+    const chat = chatRef.current;
+    if (!chat) return;
+    function onScroll() {
+      const nearBottom =
+        chat!.scrollHeight - chat!.scrollTop - chat!.clientHeight < 150;
+      userScrolledRef.current = !nearBottom;
+    }
+    chat.addEventListener("scroll", onScroll);
+    return () => chat.removeEventListener("scroll", onScroll);
+  }, []);
+
+  const messageCount = messages.length;
+  useEffect(() => {
+    if (!userScrolledRef.current) {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messageCount, busy]);
 
   const activeTask =
     Object.values(tasks)
@@ -300,7 +318,10 @@ export default function App() {
         </div>
       )}
 
-      <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-5">
+      <div
+        ref={chatRef}
+        className="flex flex-1 flex-col gap-4 overflow-y-auto p-5"
+      >
         {messages.map((msg, i) => (
           <MessageBubble key={i} message={msg} />
         ))}

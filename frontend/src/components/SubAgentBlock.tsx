@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "../utils/cn";
 import { ToolBlock } from "./ToolBlock";
 import type { ToolCall } from "../types";
@@ -13,6 +13,13 @@ type Props = {
 
 export function SubAgentBlock({ role, task, tokens, toolCalls, done }: Props) {
   const [collapsed, setCollapsed] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!collapsed && scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [tokens, toolCalls, collapsed]);
 
   return (
     <div
@@ -61,8 +68,8 @@ export function SubAgentBlock({ role, task, tokens, toolCalls, done }: Props) {
         </div>
       </div>
       {!collapsed && (
-        <>
-          <div className="mt-2 mb-2 text-xs text-gray-400">{task}</div>
+        <div ref={scrollRef} className="mt-2 max-h-64 overflow-y-auto">
+          <div className="mb-2 text-xs text-gray-400">{task}</div>
           {toolCalls.map((call, i) => (
             <ToolBlock key={i} call={call} compact />
           ))}
@@ -71,7 +78,7 @@ export function SubAgentBlock({ role, task, tokens, toolCalls, done }: Props) {
               {tokens}
             </div>
           )}
-        </>
+        </div>
       )}
     </div>
   );
