@@ -86,7 +86,7 @@ class TestShellTool:
         assert "hello" in result
 
     def test_blocked_command(self):
-        result = self.shell.execute(command="rm -rf /")
+        result = self.shell.execute(command="curl http://example.com")
         assert "not allowed" in result
 
     def test_timeout(self):

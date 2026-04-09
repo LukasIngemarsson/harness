@@ -1,6 +1,7 @@
 import json
 import logging
 import re
+import time
 import uuid
 from collections.abc import Iterator
 from queue import Queue
@@ -28,6 +29,8 @@ TASK_TOOL_NAMES = {
 }
 
 MAX_ITERATIONS = 25
+MAX_TOOL_RETRIES = 2
+RETRY_DELAY = 1.0
 
 DANGEROUS_SHELL_PATTERNS = [
     (re.compile(r"\brm\b"), "destructive command: rm"),
@@ -81,6 +84,7 @@ class Agent:
         self,
         config: dict,
         conversation: Conversation,
+        tool_cache: dict | None = None,
     ) -> None:
         self.client = OpenAI(
             base_url=config["base_url"],
@@ -91,6 +95,9 @@ class Agent:
         self.conversation = conversation
         self._confirm_queue: Queue[bool] = Queue()
         self._confirm_event = Event()
+        self._tool_cache: dict[tuple, str] = (
+            tool_cache if tool_cache is not None else {}
+        )
 
     def run(self, message: str) -> Iterator[dict]:
         logger.info("User message: %s", message)
@@ -180,7 +187,9 @@ class Agent:
             " You are in the .workspace/ directory."
         )
         child = Agent(
-            self.config, Conversation(system_prompt)
+            self.config,
+            Conversation(system_prompt),
+            tool_cache=self._tool_cache,
         )
 
         yield {
@@ -435,12 +444,64 @@ class Agent:
         for t in threads:
             t.join()
 
+    @staticmethod
+    def _make_cache_key(
+        name: str, args: dict
+    ) -> tuple:
+        return (name, json.dumps(args, sort_keys=True))
+
     def _execute_single_tool(
         self, name: str, args: dict
     ) -> str:
-        if name in TOOL_MAP:
+        if name not in TOOL_MAP:
+            return f"Error: tool '{name}' not found"
+
+        tool = TOOL_MAP[name]
+
+        # Check cache for idempotent tools
+        if tool.cacheable:
+            cache_key = self._make_cache_key(name, args)
+            if cache_key in self._tool_cache:
+                logger.info(
+                    "Cache hit: %s(%s)", name, args
+                )
+                return self._tool_cache[cache_key]
+
+        # Execute with retry on transient errors
+        last_error = ""
+        for attempt in range(1, MAX_TOOL_RETRIES + 1):
             try:
-                return TOOL_MAP[name].execute(**args)
+                result = tool.execute(**args)
             except TypeError as e:
                 return f"Error: {e}"
-        return f"Error: tool '{name}' not found"
+            except Exception as e:
+                last_error = str(e)
+                logger.warning(
+                    "Tool %s attempt %d failed: %s",
+                    name,
+                    attempt,
+                    e,
+                )
+                if attempt < MAX_TOOL_RETRIES:
+                    time.sleep(RETRY_DELAY)
+                continue
+
+            if result.startswith("Error:") and attempt < MAX_TOOL_RETRIES:
+                last_error = result
+                logger.warning(
+                    "Tool %s attempt %d returned error: %s",
+                    name,
+                    attempt,
+                    result,
+                )
+                time.sleep(RETRY_DELAY)
+                continue
+
+            # Cache successful results for idempotent tools
+            if tool.cacheable and not result.startswith("Error:"):
+                cache_key = self._make_cache_key(name, args)
+                self._tool_cache[cache_key] = result
+
+            return result
+
+        return last_error or "Error: tool execution failed"

@@ -13,6 +13,7 @@ MAX_RESULTS = 5
 
 class WebSearchTool(Tool):
     name = "web_search"
+    cacheable = True
     description = (
         "Search the web for any query. Returns titles,"
         " snippets, and URLs from real search results."
