@@ -1,10 +1,11 @@
-import Markdown from "react-markdown";
-import rehypeHighlight from "rehype-highlight";
-import remarkGfm from "remark-gfm";
 import type { ChatMessage } from "../types";
 import { MessageRole } from "../types";
+import { AssistantMessage } from "./AssistantMessage";
+import { MessageWrapper } from "./MessageWrapper";
 import { SubAgentBlock } from "./SubAgentBlock";
+import { SystemMessage } from "./SystemMessage";
 import { ToolBlock } from "./ToolBlock";
+import { UserMessage } from "./UserMessage";
 
 type Props = {
   message: ChatMessage;
@@ -12,69 +13,51 @@ type Props = {
 };
 
 export function MessageBubble({ message, onConfirm }: Props) {
-  if (message.role === MessageRole.User) {
-    return (
-      <div className="mx-auto w-full max-w-3xl">
-        <div className="mb-1 text-xs font-semibold text-blue-400 uppercase">
-          User
-        </div>
-        <div className="whitespace-pre-wrap">{message.content}</div>
-      </div>
-    );
-  }
+  switch (message.role) {
+    case MessageRole.User:
+      return (
+        <MessageWrapper label="User" labelColor="text-blue-400">
+          <UserMessage content={message.content} />
+        </MessageWrapper>
+      );
 
-  if (message.role === MessageRole.System) {
-    return (
-      <div className="mx-auto w-full max-w-3xl">
-        <div className="text-xs text-gray-500 italic">{message.content}</div>
-      </div>
-    );
-  }
+    case MessageRole.System:
+      return (
+        <MessageWrapper>
+          <SystemMessage content={message.content} />
+        </MessageWrapper>
+      );
 
-  if (message.role === MessageRole.SubAgent) {
-    return (
-      <div className="mx-auto w-full max-w-3xl">
-        <SubAgentBlock
-          role={message.agentRole}
-          task={message.task}
-          tokens={message.tokens}
-          toolCalls={message.toolCalls}
-          done={message.done}
-        />
-      </div>
-    );
-  }
+    case MessageRole.Assistant:
+      return (
+        <MessageWrapper label="Assistant" labelColor="text-green-400">
+          <AssistantMessage content={message.content} />
+        </MessageWrapper>
+      );
 
-  if (message.role === MessageRole.Tool) {
-    return (
-      <div className="mx-auto w-full max-w-3xl">
-        <div className="mb-1 text-xs font-semibold text-gray-500 uppercase">
-          Tools
-        </div>
-        {message.calls.map((call, i) => (
-          <ToolBlock key={i} call={call} onConfirm={onConfirm} />
-        ))}
-      </div>
-    );
-  }
+    case MessageRole.Tool:
+      return (
+        <MessageWrapper label="Tools">
+          {message.calls.map((call, i) => (
+            <ToolBlock key={i} call={call} onConfirm={onConfirm} />
+          ))}
+        </MessageWrapper>
+      );
 
-  if (message.role === MessageRole.Assistant) {
-    return (
-      <div className="mx-auto w-full max-w-3xl">
-        <div className="mb-1 text-xs font-semibold text-green-400 uppercase">
-          Assistant
-        </div>
-        <div className="prose prose-invert max-w-none">
-          <Markdown
-            remarkPlugins={[remarkGfm]}
-            rehypePlugins={[rehypeHighlight]}
-          >
-            {message.content}
-          </Markdown>
-        </div>
-      </div>
-    );
-  }
+    case MessageRole.SubAgent:
+      return (
+        <MessageWrapper>
+          <SubAgentBlock
+            role={message.agentRole}
+            task={message.task}
+            tokens={message.tokens}
+            toolCalls={message.toolCalls}
+            done={message.done}
+          />
+        </MessageWrapper>
+      );
 
-  return null;
+    default:
+      return null;
+  }
 }
