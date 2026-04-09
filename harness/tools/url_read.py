@@ -42,6 +42,7 @@ class _TextExtractor(HTMLParser):
 
 class UrlReadTool(Tool):
     name = "read_url"
+    cacheable = True
     description = (
         "Fetch a webpage and return its text content."
         " Give it any URL. Returns readable text,"

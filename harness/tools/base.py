@@ -5,6 +5,7 @@ class Tool(ABC):
     name: str
     description: str
     parameters: dict
+    cacheable: bool = False
 
     @abstractmethod
     def execute(self, **kwargs: object) -> str:
