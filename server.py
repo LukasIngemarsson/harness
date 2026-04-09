@@ -12,7 +12,7 @@ from harness.agent import Agent, serialize_tasks
 from harness.config import load_config
 from harness.memory.conversation import Conversation
 from harness.memory.task import get_task_store
-from harness.prompts import build_system_prompt, list_profiles
+from harness.prompts import build_system_prompt, switch_mode
 from harness.utils.enums import Command, EventType, Role
 from harness.utils.log import setup_logging
 
@@ -25,9 +25,7 @@ app = FastAPI()
 
 static_dir = Path("static/assets")
 if static_dir.is_dir():
-    app.mount(
-        "/assets", StaticFiles(directory=static_dir), name="assets"
-    )
+    app.mount("/assets", StaticFiles(directory=static_dir), name="assets")
 
 
 @app.get("/")
@@ -51,9 +49,7 @@ def _convert_messages(messages: list[dict]) -> list[dict]:
             continue
 
         if role == Role.USER:
-            result.append(
-                {"role": Role.USER, "content": msg["content"]}
-            )
+            result.append({"role": Role.USER, "content": msg["content"]})
 
         elif role == Role.ASSISTANT:
             tool_calls_raw = msg.get("tool_calls", [])
@@ -63,9 +59,7 @@ def _convert_messages(messages: list[dict]) -> list[dict]:
                     fn = tc.get("function", {})
                     name = fn.get("name", "")
                     try:
-                        args = json.loads(
-                            fn.get("arguments", "{}")
-                        )
+                        args = json.loads(fn.get("arguments", "{}"))
                     except json.JSONDecodeError:
                         args = {}
                     call = {"name": name, "args": args}
@@ -76,16 +70,12 @@ def _convert_messages(messages: list[dict]) -> list[dict]:
 
             content = msg.get("content")
             if content:
-                result.append(
-                    {"role": Role.ASSISTANT, "content": content}
-                )
+                result.append({"role": Role.ASSISTANT, "content": content})
 
         elif role == Role.TOOL:
             tc_id = msg.get("tool_call_id")
             if tc_id and tc_id in tool_call_map:
-                tool_call_map[tc_id]["result"] = msg.get(
-                    "content", ""
-                )
+                tool_call_map[tc_id]["result"] = msg.get("content", "")
 
     return result
 
@@ -122,40 +112,21 @@ async def websocket_endpoint(ws: WebSocket) -> None:
                 get_task_store().clear()
                 conversation = Conversation(system_prompt)
                 agent = Agent(config, conversation)
-                await ws.send_json(
-                    {"type": EventType.CLEARED}
-                )
+                await ws.send_json({"type": EventType.CLEARED})
                 continue
 
             if message.lower().startswith(Command.MODE):
-                parts = message.split(maxsplit=1)
-                if len(parts) < 2:
-                    available = ", ".join(list_profiles())
-                    await ws.send_json({
+                result = switch_mode(message)
+                await ws.send_json(
+                    {
                         "type": EventType.SYSTEM_MESSAGE,
-                        "content": f"Available: {available}",
-                    })
-                    continue
-                profile_name = parts[1].strip().lower()
-                if profile_name not in list_profiles():
-                    available = ", ".join(list_profiles())
-                    await ws.send_json({
-                        "type": EventType.SYSTEM_MESSAGE,
-                        "content": f"Unknown profile"
-                        f" '{profile_name}'."
-                        f" Available: {available}",
-                    })
-                    continue
-                system_prompt = build_system_prompt(
-                    profile_name
+                        "content": result["message"],
+                    }
                 )
-                conversation = Conversation(system_prompt)
-                agent = Agent(config, conversation)
-                await ws.send_json({
-                    "type": EventType.SYSTEM_MESSAGE,
-                    "content": f"Switched to"
-                    f" {profile_name} mode.",
-                })
+                if result["prompt"]:
+                    system_prompt = result["prompt"]
+                    conversation = Conversation(system_prompt)
+                    agent = Agent(config, conversation)
                 continue
 
             event_queue: asyncio.Queue = asyncio.Queue()
@@ -163,16 +134,10 @@ async def websocket_endpoint(ws: WebSocket) -> None:
 
             def _run_agent() -> None:
                 for event in agent.run(message):
-                    loop.call_soon_threadsafe(
-                        event_queue.put_nowait, event
-                    )
-                loop.call_soon_threadsafe(
-                    event_queue.put_nowait, None
-                )
+                    loop.call_soon_threadsafe(event_queue.put_nowait, event)
+                loop.call_soon_threadsafe(event_queue.put_nowait, None)
 
-            thread = Thread(
-                target=_run_agent, daemon=True
-            )
+            thread = Thread(target=_run_agent, daemon=True)
             thread.start()
 
             while True:
@@ -182,9 +147,7 @@ async def websocket_endpoint(ws: WebSocket) -> None:
                 await ws.send_json(event)
                 if event.get("type") == EventType.TOOL_CONFIRM:
                     confirm_data = await ws.receive_json()
-                    approved = confirm_data.get(
-                        "approved", False
-                    )
+                    approved = confirm_data.get("approved", False)
                     agent.confirm(approved)
                 await asyncio.sleep(0)
 
@@ -196,9 +159,7 @@ async def websocket_endpoint(ws: WebSocket) -> None:
     except Exception as e:
         logger.error("WebSocket error: %s", e, exc_info=True)
         try:
-            await ws.send_json(
-                {"type": EventType.ERROR, "content": str(e)}
-            )
+            await ws.send_json({"type": EventType.ERROR, "content": str(e)})
         except Exception:
             pass
         conversation.save()

@@ -36,11 +36,26 @@ def load_profile(name: str) -> str:
         return ""
 
 
+def switch_mode(user_input: str) -> dict:
+    parts = user_input.split(maxsplit=1)
+    available = ", ".join(list_profiles())
+    if len(parts) < 2:
+        return {"message": f"Available: {available}", "prompt": None}
+    name = parts[1].strip().lower()
+    if name not in list_profiles():
+        return {
+            "message": f"Unknown profile '{name}'. Available: {available}",
+            "prompt": None,
+        }
+    return {
+        "message": f"Switched to {name} mode.",
+        "prompt": build_system_prompt(name),
+    }
+
+
 def build_system_prompt(profile: str = DEFAULT_PROFILE) -> str:
     template = load_prompt("harness.prompts", "system.md")
-    tool_list = "\n".join(
-        f"- {tool.name}: {tool.description}" for tool in TOOLS
-    )
+    tool_list = "\n".join(f"- {tool.name}: {tool.description}" for tool in TOOLS)
     profile_content = load_profile(profile)
     prompt = template.format_map(
         {

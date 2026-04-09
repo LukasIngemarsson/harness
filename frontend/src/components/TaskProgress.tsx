@@ -1,74 +1,46 @@
-import { useState } from "react";
 import type { TaskStep } from "../types";
 import { TaskStatus } from "../types";
 import { cn } from "../utils/cn";
+import { Collapsible } from "./Collapsible";
 
 type Props = {
   goal: string;
   steps: TaskStep[];
 };
 
-function statusIcon(status: string): string {
-  switch (status) {
-    case TaskStatus.Completed:
-      return "\u2713";
-    case TaskStatus.InProgress:
-      return "\u25CB";
-    case TaskStatus.Failed:
-      return "\u2717";
-    case TaskStatus.Skipped:
-      return "\u2013";
-    default:
-      return "\u00B7";
-  }
-}
+const STATUS_DISPLAY: Record<string, { icon: string; color: string }> = {
+  [TaskStatus.Completed]: { icon: "\u2713", color: "text-green-400" },
+  [TaskStatus.InProgress]: { icon: "\u25CB", color: "text-blue-400" },
+  [TaskStatus.Failed]: { icon: "\u2717", color: "text-red-400" },
+  [TaskStatus.Skipped]: { icon: "\u2013", color: "text-gray-500" },
+  [TaskStatus.Pending]: { icon: "\u00B7", color: "text-gray-600" },
+};
 
-function statusColor(status: string): string {
-  switch (status) {
-    case TaskStatus.Completed:
-      return "text-green-400";
-    case TaskStatus.InProgress:
-      return "text-blue-400";
-    case TaskStatus.Failed:
-      return "text-red-400";
-    case TaskStatus.Skipped:
-      return "text-gray-500";
-    default:
-      return "text-gray-600";
-  }
-}
+const DEFAULT_STATUS = { icon: "\u00B7", color: "text-gray-600" };
 
 export function TaskProgress({ goal, steps }: Props) {
-  const [collapsed, setCollapsed] = useState(false);
   const completed = steps.filter(
     (s) => s.status === TaskStatus.Completed,
   ).length;
 
   return (
-    <div
-      className={cn("rounded border border-gray-700 bg-gray-800/50 text-sm")}
-    >
-      <button
-        type="button"
-        onClick={() => setCollapsed((c) => !c)}
-        className={cn(
-          "flex w-full items-center justify-between px-3 py-2",
-          "text-left hover:bg-gray-700/30",
-        )}
-      >
-        <span className="font-medium text-gray-300">{goal}</span>
-        <span className="text-xs text-gray-500">
+    <Collapsible
+      className="rounded border border-gray-700 bg-gray-800/50 text-sm"
+      header={
+        <span className="px-3 py-2 font-medium text-gray-300">{goal}</span>
+      }
+      headerRight={
+        <span className="px-3 py-2 text-xs text-gray-500">
           {completed}/{steps.length}
-          <span className="ml-2">{collapsed ? "\u25B6" : "\u25BC"}</span>
         </span>
-      </button>
-      {!collapsed && (
-        <div className="flex flex-col gap-1 px-3 pb-2">
-          {steps.map((step, i) => (
+      }
+    >
+      <div className="flex flex-col gap-1 px-3 pb-2">
+        {steps.map((step, i) => {
+          const { icon, color } = STATUS_DISPLAY[step.status] ?? DEFAULT_STATUS;
+          return (
             <div key={i} className="flex items-center gap-2">
-              <span className={cn("w-4 text-center", statusColor(step.status))}>
-                {statusIcon(step.status)}
-              </span>
+              <span className={cn("w-4 text-center", color)}>{icon}</span>
               <span
                 className={cn(
                   step.status === TaskStatus.Completed &&
@@ -81,9 +53,9 @@ export function TaskProgress({ goal, steps }: Props) {
                 {step.description}
               </span>
             </div>
-          ))}
-        </div>
-      )}
-    </div>
+          );
+        })}
+      </div>
+    </Collapsible>
   );
 }
