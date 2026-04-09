@@ -1,6 +1,14 @@
 from abc import ABC, abstractmethod
 
 
+class ToolError(Exception):
+    def __init__(
+        self, message: str, *, retryable: bool = False
+    ) -> None:
+        super().__init__(message)
+        self.retryable = retryable
+
+
 class Tool(ABC):
     name: str
     description: str

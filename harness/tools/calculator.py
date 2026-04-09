@@ -1,4 +1,4 @@
-from harness.tools.base import Tool
+from harness.tools.base import Tool, ToolError
 
 
 class CalculatorTool(Tool):
@@ -26,7 +26,7 @@ class CalculatorTool(Tool):
         try:
             a, b = float(a), float(b)
         except (TypeError, ValueError):
-            return "Error: a and b must be numbers"
+            raise ToolError("a and b must be numbers")
         match operation:
             case "add":
                 return str(a + b)
@@ -35,5 +35,7 @@ class CalculatorTool(Tool):
             case "multiply":
                 return str(a * b)
             case "divide":
-                return str(a / b) if b != 0 else "Error: division by zero"
-        return "Unknown operation"
+                if b == 0:
+                    raise ToolError("division by zero")
+                return str(a / b)
+        raise ToolError(f"unknown operation: {operation}")

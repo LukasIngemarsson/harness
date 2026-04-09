@@ -3,7 +3,7 @@ import re
 from html.parser import HTMLParser
 from urllib.request import Request, urlopen
 
-from harness.tools.base import Tool
+from harness.tools.base import Tool, ToolError
 
 logger = logging.getLogger(__name__)
 
@@ -67,7 +67,9 @@ class UrlReadTool(Tool):
             with urlopen(req, timeout=15) as resp:
                 html = resp.read().decode("utf-8", errors="replace")
         except Exception as e:
-            return f"Error: failed to fetch URL: {e}"
+            raise ToolError(
+                f"failed to fetch URL: {e}", retryable=True
+            )
 
         extractor = _TextExtractor()
         extractor.feed(html)
@@ -76,4 +78,4 @@ class UrlReadTool(Tool):
         if len(text) > MAX_CHARS:
             text = text[:MAX_CHARS] + "\n\n[truncated]"
 
-        return text if text else "Error: no readable text found"
+        return text if text else "(no readable text found)"

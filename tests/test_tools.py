@@ -1,5 +1,8 @@
+import pytest
+
 from harness.config import WORKSPACE_DIR
 from harness.tools import TOOLS
+from harness.tools.base import ToolError
 from harness.tools.calculator import CalculatorTool
 from harness.tools.file import FileReadTool, FileWriteTool
 from harness.tools.shell import ShellTool
@@ -19,19 +22,19 @@ class TestCalculatorTool:
         assert self.calc.execute(a=3, b=7, operation="multiply") == "21.0"
 
     def test_string_args_rejected(self):
-        assert "Error" in self.calc.execute(a="hello", b=2, operation="add")
+        with pytest.raises(ToolError):
+            self.calc.execute(a="hello", b=2, operation="add")
 
     def test_divide(self):
         assert self.calc.execute(a=10, b=4, operation="divide") == "2.5"
 
     def test_divide_by_zero(self):
-        assert (
+        with pytest.raises(ToolError, match="division by zero"):
             self.calc.execute(a=5, b=0, operation="divide")
-            == "Error: division by zero"
-        )
 
     def test_unknown_operation(self):
-        assert self.calc.execute(a=1, b=1, operation="power") == "Unknown operation"
+        with pytest.raises(ToolError, match="unknown operation"):
+            self.calc.execute(a=1, b=1, operation="power")
 
 
 class TestFileReadTool:
@@ -45,12 +48,12 @@ class TestFileReadTool:
         f.unlink()
 
     def test_read_missing_file(self):
-        assert "Error: file not found" in self.reader.execute(
-            path="_nonexistent.txt"
-        )
+        with pytest.raises(ToolError, match="file not found"):
+            self.reader.execute(path="_nonexistent.txt")
 
     def test_path_traversal_blocked(self):
-        assert "access denied" in self.reader.execute(path="../../config.py")
+        with pytest.raises(ToolError, match="access denied"):
+            self.reader.execute(path="../../config.py")
 
 
 class TestFileWriteTool:
@@ -72,9 +75,8 @@ class TestFileWriteTool:
         (WORKSPACE_DIR / "_test_dir").rmdir()
 
     def test_path_traversal_blocked(self):
-        assert "access denied" in self.writer.execute(
-            path="../../evil.txt", content="bad"
-        )
+        with pytest.raises(ToolError, match="access denied"):
+            self.writer.execute(path="../../evil.txt", content="bad")
 
 
 class TestShellTool:
@@ -86,8 +88,8 @@ class TestShellTool:
         assert "hello" in result
 
     def test_blocked_command(self):
-        result = self.shell.execute(command="curl http://example.com")
-        assert "not allowed" in result
+        with pytest.raises(ToolError, match="not allowed"):
+            self.shell.execute(command="curl http://example.com")
 
     def test_timeout(self):
         result = self.shell.execute(command="echo fast")
