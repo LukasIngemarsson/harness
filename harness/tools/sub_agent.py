@@ -24,6 +24,15 @@ class SubAgentTool(Tool):
                 "type": "string",
                 "description": "The task for the sub-agent",
             },
+            "reflect": {
+                "type": "boolean",
+                "description": (
+                    "If true, the sub-agent reviews and"
+                    " improves its output before returning."
+                    " Use for research or writing tasks"
+                    " where quality matters."
+                ),
+            },
         },
         "required": ["role", "task"],
     }

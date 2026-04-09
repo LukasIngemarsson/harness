@@ -21,13 +21,15 @@ Auto-discovered from `tools/`. Drop a `Tool` subclass in and it registers.
 
 - `calculate` — Basic arithmetic
 - `read_file` / `write_file` — File ops in `.workspace/`
-- `run_shell` — Allowlisted shell commands
-- `python_eval` — Unrestricted Python execution (local use only)
+- `run_shell` — Allowlisted shell commands (destructive commands require confirmation)
 - `web_search` — Google search via ddgs library
 - `read_url` — Fetch and extract text from any URL
+- `http_request` — Full HTTP client (GET, POST, PUT, PATCH, DELETE) for APIs
+- `git` — Read-only git commands (status, log, diff, show, blame, branch)
 - `get_current_time` — Current date/time
 - `plan_task` / `update_task` / `list_tasks` — Task planning and tracking
 - `save_memory` / `read_memory` — Persistent agent memory
+- `spawn_agent` — Spawn sub-agents with optional reflection pass
 
 ## Running
 

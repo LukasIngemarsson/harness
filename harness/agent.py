@@ -31,6 +31,7 @@ TASK_TOOL_NAMES = {
 
 MAX_ITERATIONS = 25
 MAX_TOOL_RETRIES = 2
+MAX_LLM_RETRIES = 3
 RETRY_DELAY = 1.0
 
 DANGEROUS_SHELL_PATTERNS = [
@@ -105,18 +106,35 @@ class Agent:
         self.conversation.add_user_message(message)
 
         for _ in range(MAX_ITERATIONS):
-            try:
-                response = self.client.chat.completions.create(
-                    model=self.model,
-                    messages=self.conversation.messages,
-                    tools=TOOL_DEFINITIONS,
-                    tool_choice="auto",
-                    stream=True,
-                    stream_options={"include_usage": True},
-                )
-            except Exception as e:
-                logger.error("Failed to reach model: %s", e)
-                yield {"type": EventType.ERROR, "content": str(e)}
+            response = None
+            for attempt in range(1, MAX_LLM_RETRIES + 1):
+                try:
+                    response = self.client.chat.completions.create(
+                        model=self.model,
+                        messages=self.conversation.messages,
+                        tools=TOOL_DEFINITIONS,
+                        tool_choice="auto",
+                        stream=True,
+                        stream_options={"include_usage": True},
+                    )
+                    break
+                except Exception as e:
+                    logger.warning(
+                        "LLM request attempt %d/%d failed: %s",
+                        attempt,
+                        MAX_LLM_RETRIES,
+                        e,
+                    )
+                    if attempt >= MAX_LLM_RETRIES:
+                        logger.error(
+                            "LLM request failed after %d attempts",
+                            MAX_LLM_RETRIES,
+                        )
+                        yield {"type": EventType.ERROR, "content": str(e)}
+                    else:
+                        time.sleep(RETRY_DELAY * attempt)
+
+            if response is None:
                 break
 
             content = ""
@@ -168,6 +186,68 @@ class Agent:
     def confirm(self, approved: bool) -> None:
         self._confirm_queue.put(approved)
 
+    def reflect(self, output: str) -> Iterator[dict]:
+        logger.info("Starting reflection pass")
+        reflection_prompt = (
+            "Review your previous response and improve it."
+            " Fix any errors, fill gaps, improve clarity,"
+            " and ensure accuracy. If the response is"
+            " already good, return it unchanged.\n\n"
+            "Your previous response:\n"
+            f"{output}"
+        )
+        self.conversation.add_user_message(reflection_prompt)
+
+        for attempt in range(1, MAX_LLM_RETRIES + 1):
+            try:
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=self.conversation.messages,
+                    stream=True,
+                    stream_options={"include_usage": True},
+                )
+                break
+            except Exception as e:
+                logger.warning(
+                    "Reflection LLM attempt %d/%d failed: %s",
+                    attempt,
+                    MAX_LLM_RETRIES,
+                    e,
+                )
+                if attempt >= MAX_LLM_RETRIES:
+                    yield {
+                        "type": EventType.ERROR,
+                        "content": f"Reflection failed: {e}",
+                    }
+                    return
+                time.sleep(RETRY_DELAY * attempt)
+
+        content = ""
+        usage = None
+        for chunk in response:
+            if chunk.usage:
+                usage = {
+                    "prompt_tokens": chunk.usage.prompt_tokens,
+                    "completion_tokens": chunk.usage.completion_tokens,
+                    "total_tokens": chunk.usage.total_tokens,
+                }
+            if not chunk.choices:
+                continue
+            delta = chunk.choices[0].delta
+            if delta.content:
+                content += delta.content
+                yield {
+                    "type": EventType.TOKEN,
+                    "content": delta.content,
+                }
+
+        if content:
+            self.conversation.add_assistant_message(
+                {"role": Role.ASSISTANT, "content": content}
+            )
+
+        yield {"type": EventType.DONE, "usage": usage}
+
     def run_to_completion(self, message: str) -> str:
         result = ""
         for event in self.run(message):
@@ -176,7 +256,8 @@ class Agent:
         return result or "(no output)"
 
     def spawn(
-        self, role: str, task: str, agent_id: str
+        self, role: str, task: str, agent_id: str,
+        reflect: bool = False,
     ) -> Iterator[dict]:
         logger.info(
             "Spawning sub-agent %s: role=%s", agent_id, role
@@ -209,6 +290,22 @@ class Agent:
                 "agent_id": agent_id,
                 "event": event,
             }
+
+        if reflect and result:
+            logger.info(
+                "Sub-agent %s starting reflection", agent_id
+            )
+            reflected = ""
+            for event in child.reflect(result):
+                if event["type"] == EventType.TOKEN:
+                    reflected += event["content"]
+                yield {
+                    "type": EventType.SUB_AGENT_UPDATE,
+                    "agent_id": agent_id,
+                    "event": event,
+                }
+            if reflected:
+                result = reflected
 
         yield {
             "type": EventType.SUB_AGENT_END,
@@ -352,6 +449,7 @@ class Agent:
                 role=args.get("role", Role.ASSISTANT),
                 task=args.get("task", ""),
                 agent_id=agent_id,
+                reflect=args.get("reflect", False),
             ):
                 if sub_event["type"] == EventType.SUB_AGENT_END:
                     result = sub_event["result"]
@@ -378,6 +476,7 @@ class Agent:
                     role=args.get("role", Role.ASSISTANT),
                     task=args.get("task", ""),
                     agent_id=agent_id,
+                    reflect=args.get("reflect", False),
                 ):
                     if (
                         sub_event["type"]
