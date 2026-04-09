@@ -18,6 +18,13 @@ ALLOWED_COMMANDS = {
     "pwd",
     "python",
     "python3",
+    "rm",
+    "rmdir",
+    "mv",
+    "cp",
+    "chmod",
+    "mkdir",
+    "touch",
 }
 
 
@@ -26,7 +33,10 @@ class ShellTool(Tool):
     description = (
         "Run a shell command. Allowed: ls, cat,"
         " echo, head, tail, grep, find, wc, sort,"
-        " pwd, python, python3."
+        " pwd, python, python3, rm, rmdir, mv, cp,"
+        " chmod, mkdir, touch."
+        " Destructive commands (rm, rmdir, chmod)"
+        " require user confirmation."
         " To run Python code, first save it with"
         " write_file, then run: python3 script.py"
         " For quick expressions: python3 -c 'print(1+1)'"

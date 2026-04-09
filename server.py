@@ -1,8 +1,8 @@
 import asyncio
 import json
 import logging
-import urllib.request
 from pathlib import Path
+from threading import Thread
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
@@ -37,22 +37,7 @@ async def root() -> FileResponse:
 
 @app.get("/api/info")
 async def info() -> dict:
-    context_length = None
-    try:
-        req = urllib.request.Request(
-            f"{config['base_url'].replace('/v1', '')}/api/show",
-            data=json.dumps({"name": config["model"]}).encode(),
-        )
-        with urllib.request.urlopen(req, timeout=5) as resp:
-            data = json.loads(resp.read().decode())
-            for key, value in data.get("model_info", {}).items():
-                if "context_length" in key:
-                    context_length = value
-                    break
-    except Exception:
-        pass
-
-    return {"model": config["model"], "context_length": context_length}
+    return {"model": config["model"]}
 
 
 def _convert_messages(messages: list[dict]) -> list[dict]:
@@ -173,9 +158,37 @@ async def websocket_endpoint(ws: WebSocket) -> None:
                 })
                 continue
 
-            for event in agent.run(message):
+            event_queue: asyncio.Queue = asyncio.Queue()
+            loop = asyncio.get_event_loop()
+
+            def _run_agent() -> None:
+                for event in agent.run(message):
+                    loop.call_soon_threadsafe(
+                        event_queue.put_nowait, event
+                    )
+                loop.call_soon_threadsafe(
+                    event_queue.put_nowait, None
+                )
+
+            thread = Thread(
+                target=_run_agent, daemon=True
+            )
+            thread.start()
+
+            while True:
+                event = await event_queue.get()
+                if event is None:
+                    break
                 await ws.send_json(event)
+                if event.get("type") == EventType.TOOL_CONFIRM:
+                    confirm_data = await ws.receive_json()
+                    approved = confirm_data.get(
+                        "approved", False
+                    )
+                    agent.confirm(approved)
                 await asyncio.sleep(0)
+
+            thread.join()
 
     except WebSocketDisconnect:
         logger.info("WebSocket disconnected")

@@ -8,9 +8,10 @@ import { ToolBlock } from "./ToolBlock";
 
 type Props = {
   message: ChatMessage;
+  onConfirm?: (approved: boolean) => void;
 };
 
-export function MessageBubble({ message }: Props) {
+export function MessageBubble({ message, onConfirm }: Props) {
   if (message.role === MessageRole.User) {
     return (
       <div className="mx-auto w-full max-w-3xl">
@@ -51,7 +52,7 @@ export function MessageBubble({ message }: Props) {
           Tools
         </div>
         {message.calls.map((call, i) => (
-          <ToolBlock key={i} call={call} />
+          <ToolBlock key={i} call={call} onConfirm={onConfirm} />
         ))}
       </div>
     );

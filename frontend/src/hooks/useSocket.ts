@@ -32,9 +32,13 @@ export function useSocket(onEvent: (event: AgentEvent) => void) {
     wsRef.current?.send(JSON.stringify({ message: text }));
   }, []);
 
+  const sendConfirm = useCallback((approved: boolean) => {
+    wsRef.current?.send(JSON.stringify({ approved }));
+  }, []);
+
   const reconnect = useCallback(() => {
     wsRef.current?.close();
   }, []);
 
-  return { sendMessage, connected, reconnect };
+  return { sendMessage, sendConfirm, connected, reconnect };
 }
