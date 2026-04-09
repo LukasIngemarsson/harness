@@ -22,7 +22,6 @@ export default function App() {
   const [model, setModel] = useState<string>("");
   const [profile, setProfile] = useState<string>("default");
   const [tokenCount, setTokenCount] = useState<number | null>(null);
-  const [contextLength, setContextLength] = useState<number | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const chatRef = useRef<HTMLDivElement>(null);
 
@@ -31,7 +30,6 @@ export default function App() {
       .then((r) => r.json())
       .then((data) => {
         setModel(data.model);
-        if (data.context_length) setContextLength(data.context_length);
       })
       .catch(() => setModel("unknown"));
 
@@ -145,6 +143,22 @@ export default function App() {
         ]);
         break;
 
+      case EventType.ToolConfirm:
+        setMessages((prev) => {
+          const last = prev[prev.length - 1];
+          if (last?.role === MessageRole.Tool && last.calls.length > 0) {
+            const calls = [...last.calls];
+            calls[calls.length - 1] = {
+              ...calls[calls.length - 1],
+              confirmReason: event.reason,
+              confirmPending: true,
+            };
+            return [...prev.slice(0, -1), { ...last, calls }];
+          }
+          return prev;
+        });
+        break;
+
       case EventType.SubAgentStart:
         setMessages((prev) => [
           ...prev,
@@ -210,7 +224,34 @@ export default function App() {
     }
   }, []);
 
-  const { sendMessage, connected, reconnect } = useSocket(onEvent);
+  const { sendMessage, sendConfirm, connected, reconnect } = useSocket(onEvent);
+
+  function handleConfirm(approved: boolean) {
+    sendConfirm(approved);
+    setMessages((prev) => {
+      // Clear confirmPending from the last tool call
+      for (let i = prev.length - 1; i >= 0; i--) {
+        const msg = prev[i];
+        if (msg.role === MessageRole.Tool) {
+          const calls = [...msg.calls];
+          const lastCall = calls[calls.length - 1];
+          if (lastCall?.confirmPending) {
+            calls[calls.length - 1] = {
+              ...lastCall,
+              confirmPending: false,
+              result: approved ? undefined : "Denied by user",
+            };
+            return [
+              ...prev.slice(0, i),
+              { ...msg, calls },
+              ...prev.slice(i + 1),
+            ];
+          }
+        }
+      }
+      return prev;
+    });
+  }
 
   function handleSend(text: string) {
     if (text.toLowerCase() === Command.Clear) {
@@ -257,12 +298,11 @@ export default function App() {
     return () => chat.removeEventListener("scroll", onScroll);
   }, []);
 
-  const messageCount = messages.length;
   useEffect(() => {
     if (!userScrolledRef.current) {
       bottomRef.current?.scrollIntoView({ behavior: "smooth" });
     }
-  }, [messageCount, busy]);
+  }, [messages, busy]);
 
   const activeTask =
     Object.values(tasks)
@@ -297,7 +337,6 @@ export default function App() {
               <line x1="13" y1="5" x2="13" y2="11" />
             </svg>
             {tokenCount !== null ? `${(tokenCount / 1000).toFixed(1)}k` : "–"}
-            {contextLength && ` / ${(contextLength / 1000).toFixed(1)}k`}
           </span>
           {model && <span className="text-gray-400">{model}</span>}
           <span
@@ -323,7 +362,7 @@ export default function App() {
         className="flex flex-1 flex-col gap-4 overflow-y-auto p-5"
       >
         {messages.map((msg, i) => (
-          <MessageBubble key={i} message={msg} />
+          <MessageBubble key={i} message={msg} onConfirm={handleConfirm} />
         ))}
         {busy && <ThinkingIndicator startTime={busySince} />}
         <div ref={bottomRef} />

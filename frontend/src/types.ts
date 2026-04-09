@@ -12,6 +12,7 @@ export enum EventType {
   SubAgentStart = "sub_agent_start",
   SubAgentUpdate = "sub_agent_update",
   SubAgentEnd = "sub_agent_end",
+  ToolConfirm = "tool_confirm",
 }
 
 export enum Command {
@@ -71,6 +72,12 @@ type SubAgentEndEvent = {
   agent_id: string;
   result: string;
 };
+type ToolConfirmEvent = {
+  type: EventType.ToolConfirm;
+  name: string;
+  args: Record<string, unknown>;
+  reason: string;
+};
 
 export type AgentEvent =
   | TokenEvent
@@ -85,7 +92,8 @@ export type AgentEvent =
   | SystemMessageEvent
   | SubAgentStartEvent
   | SubAgentUpdateEvent
-  | SubAgentEndEvent;
+  | SubAgentEndEvent
+  | ToolConfirmEvent;
 
 export type SubAgentMessage = {
   role: MessageRole.SubAgent;
@@ -120,4 +128,6 @@ export type ToolCall = {
   name: string;
   args: Record<string, unknown>;
   result?: string;
+  confirmReason?: string;
+  confirmPending?: boolean;
 };

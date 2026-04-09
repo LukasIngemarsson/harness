@@ -31,6 +31,7 @@ class EventType(StrEnum):
     SUB_AGENT_START = "sub_agent_start"
     SUB_AGENT_UPDATE = "sub_agent_update"
     SUB_AGENT_END = "sub_agent_end"
+    TOOL_CONFIRM = "tool_confirm"
 
 
 class Command(StrEnum):

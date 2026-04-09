@@ -1,9 +1,10 @@
 import json
 import logging
+import re
 import uuid
 from collections.abc import Iterator
 from queue import Queue
-from threading import Thread
+from threading import Event, Thread
 
 from openai import OpenAI
 
@@ -27,6 +28,37 @@ TASK_TOOL_NAMES = {
 }
 
 MAX_ITERATIONS = 25
+
+DANGEROUS_SHELL_PATTERNS = [
+    (re.compile(r"\brm\b"), "destructive command: rm"),
+    (re.compile(r"\brmdir\b"), "destructive command: rmdir"),
+    (re.compile(r"\bchmod\b"), "permission change: chmod"),
+    (re.compile(r"\bmv\b"), "move/rename command: mv"),
+]
+
+SENSITIVE_FILE_PATTERNS = [
+    re.compile(r"\.env($|\.)"),
+    re.compile(r"credentials", re.IGNORECASE),
+    re.compile(r"secrets?\."), re.compile(r"\.pem$"),
+    re.compile(r"\.key$"),
+    re.compile(r"id_rsa"),
+]
+
+
+def _check_dangerous(
+    name: str, args: dict
+) -> str | None:
+    if name == "run_shell":
+        cmd = args.get("command", "")
+        for pattern, reason in DANGEROUS_SHELL_PATTERNS:
+            if pattern.search(cmd):
+                return reason
+    if name in ("read_file", "write_file"):
+        path = args.get("path", "")
+        for pattern in SENSITIVE_FILE_PATTERNS:
+            if pattern.search(path):
+                return f"sensitive file: {path}"
+    return None
 
 
 def serialize_tasks(tasks: list[Task]) -> list[dict]:
@@ -57,6 +89,8 @@ class Agent:
         self.model = config["model"]
         self.config = config
         self.conversation = conversation
+        self._confirm_queue: Queue[bool] = Queue()
+        self._confirm_event = Event()
 
     def run(self, message: str) -> Iterator[dict]:
         logger.info("User message: %s", message)
@@ -122,6 +156,9 @@ class Agent:
 
             self._add_tool_call_message(content, tool_calls)
             yield from self._execute_tool_calls(tool_calls)
+
+    def confirm(self, approved: bool) -> None:
+        self._confirm_queue.put(approved)
 
     def run_to_completion(self, message: str) -> str:
         result = ""
@@ -227,6 +264,35 @@ class Agent:
                 "name": name,
                 "args": args,
             }
+
+            danger_reason = _check_dangerous(name, args)
+            if danger_reason:
+                logger.info(
+                    "Dangerous tool call: %s — %s",
+                    name,
+                    danger_reason,
+                )
+                yield {
+                    "type": EventType.TOOL_CONFIRM,
+                    "name": name,
+                    "args": args,
+                    "reason": danger_reason,
+                }
+                approved = self._confirm_queue.get()
+                if not approved:
+                    result = (
+                        "Tool call denied by user: "
+                        + danger_reason
+                    )
+                    logger.info("Tool call denied: %s", name)
+                    yield {
+                        "type": EventType.TOOL_RESULT,
+                        "result": result,
+                    }
+                    self.conversation.add_tool_result(
+                        tc["id"], result
+                    )
+                    continue
 
             result = self._execute_single_tool(name, args)
 
