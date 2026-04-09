@@ -2,7 +2,7 @@ import shlex
 import subprocess
 
 from harness.config import WORKSPACE_DIR
-from harness.tools.base import Tool
+from harness.tools.base import Tool, ToolError
 
 TIMEOUT_SECONDS = 30
 ALLOWED_COMMANDS = {
@@ -56,12 +56,12 @@ class ShellTool(Tool):
         try:
             parts = shlex.split(command)
         except ValueError as e:
-            return f"Error: invalid command syntax: {e}"
+            raise ToolError(f"invalid command syntax: {e}")
 
         base_command = parts[0] if parts else ""
         if base_command not in ALLOWED_COMMANDS:
-            return (
-                f"Error: '{base_command}' is not allowed. "
+            raise ToolError(
+                f"'{base_command}' is not allowed. "
                 f"Allowed commands: {', '.join(sorted(ALLOWED_COMMANDS))}"
             )
 
@@ -76,4 +76,7 @@ class ShellTool(Tool):
             output = result.stdout + result.stderr
             return output.strip() if output.strip() else "(no output)"
         except subprocess.TimeoutExpired:
-            return f"Error: command timed out after {TIMEOUT_SECONDS}s"
+            raise ToolError(
+                f"command timed out after {TIMEOUT_SECONDS}s",
+                retryable=True,
+            )

@@ -4,7 +4,7 @@ import logging
 
 from ddgs import DDGS
 
-from harness.tools.base import Tool
+from harness.tools.base import Tool, ToolError
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +38,9 @@ class WebSearchTool(Tool):
                 query, max_results=MAX_RESULTS, backend="google"
             )
         except Exception as e:
-            return f"Error: search failed: {e}"
+            raise ToolError(
+                f"search failed: {e}", retryable=True
+            )
 
         if not results:
             return "No results found."

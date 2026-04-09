@@ -1,6 +1,7 @@
 from unittest.mock import MagicMock, patch
 
-from harness.agent import Agent, TOOL_MAP
+from harness.agent import TOOL_MAP, Agent
+from harness.tools.base import ToolError
 
 
 class TestToolCache:
@@ -61,8 +62,8 @@ class TestToolCache:
         mock_tool = MagicMock()
         mock_tool.cacheable = True
         mock_tool.execute.side_effect = [
-            "Error: timeout",
-            "Error: timeout",
+            ToolError("timeout", retryable=True),
+            ToolError("timeout", retryable=True),
             "actual result",
         ]
 
@@ -74,9 +75,9 @@ class TestToolCache:
                 "web_search", {"query": "test"}
             )
 
-        # First call retries and eventually fails
+        # First call retries once then fails
         assert r1 == "Error: timeout"
-        # Second call should execute again (not cached)
+        # Second call executes again (error not cached)
         assert r2 == "actual result"
 
 
@@ -86,11 +87,11 @@ class TestToolRetry:
         self.agent._tool_cache = {}
 
     @patch("harness.agent.time.sleep")
-    def test_retries_on_error_result(self, mock_sleep):
+    def test_retries_on_retryable_error(self, mock_sleep):
         mock_tool = MagicMock()
         mock_tool.cacheable = False
         mock_tool.execute.side_effect = [
-            "Error: connection timeout",
+            ToolError("connection timeout", retryable=True),
             "success",
         ]
 
@@ -103,28 +104,26 @@ class TestToolRetry:
         assert mock_tool.execute.call_count == 2
         mock_sleep.assert_called_once()
 
-    @patch("harness.agent.time.sleep")
-    def test_retries_on_exception(self, mock_sleep):
+    def test_no_retry_on_non_retryable_error(self):
         mock_tool = MagicMock()
         mock_tool.cacheable = False
-        mock_tool.execute.side_effect = [
-            ConnectionError("timeout"),
-            "success",
-        ]
+        mock_tool.execute.side_effect = ToolError("file not found")
 
-        with patch.dict(TOOL_MAP, {"read_url": mock_tool}):
+        with patch.dict(TOOL_MAP, {"read_file": mock_tool}):
             result = self.agent._execute_single_tool(
-                "read_url", {"url": "http://example.com"}
+                "read_file", {"path": "missing.txt"}
             )
 
-        assert result == "success"
-        assert mock_tool.execute.call_count == 2
+        assert result == "Error: file not found"
+        assert mock_tool.execute.call_count == 1
 
     @patch("harness.agent.time.sleep")
-    def test_returns_last_error_after_max_retries(self, mock_sleep):
+    def test_returns_error_after_max_retries(self, mock_sleep):
         mock_tool = MagicMock()
         mock_tool.cacheable = False
-        mock_tool.execute.return_value = "Error: server down"
+        mock_tool.execute.side_effect = ToolError(
+            "server down", retryable=True
+        )
 
         with patch.dict(TOOL_MAP, {"read_url": mock_tool}):
             result = self.agent._execute_single_tool(

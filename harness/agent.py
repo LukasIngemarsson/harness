@@ -12,6 +12,7 @@ from openai import OpenAI
 from harness.memory.conversation import Conversation
 from harness.memory.task import Task, get_task_store
 from harness.tools import TOOLS
+from harness.tools.base import ToolError
 from harness.tools.sub_agent import SubAgentTool
 from harness.tools.task_list import ListTasksTool
 from harness.tools.task_plan import PlanTaskTool
@@ -467,38 +468,28 @@ class Agent:
                 )
                 return self._tool_cache[cache_key]
 
-        # Execute with retry on transient errors
+        # Execute with retry on retryable errors
         last_error = ""
         for attempt in range(1, MAX_TOOL_RETRIES + 1):
             try:
                 result = tool.execute(**args)
             except TypeError as e:
                 return f"Error: {e}"
-            except Exception as e:
-                last_error = str(e)
+            except ToolError as e:
+                last_error = f"Error: {e}"
+                if not e.retryable or attempt >= MAX_TOOL_RETRIES:
+                    return last_error
                 logger.warning(
-                    "Tool %s attempt %d failed: %s",
+                    "Tool %s attempt %d failed (retryable): %s",
                     name,
                     attempt,
                     e,
-                )
-                if attempt < MAX_TOOL_RETRIES:
-                    time.sleep(RETRY_DELAY)
-                continue
-
-            if result.startswith("Error:") and attempt < MAX_TOOL_RETRIES:
-                last_error = result
-                logger.warning(
-                    "Tool %s attempt %d returned error: %s",
-                    name,
-                    attempt,
-                    result,
                 )
                 time.sleep(RETRY_DELAY)
                 continue
 
             # Cache successful results for idempotent tools
-            if tool.cacheable and not result.startswith("Error:"):
+            if tool.cacheable:
                 cache_key = self._make_cache_key(name, args)
                 self._tool_cache[cache_key] = result
 
