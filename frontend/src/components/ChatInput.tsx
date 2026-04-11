@@ -99,11 +99,12 @@ export function ChatInput({ onSend, onCancel, busy, disabled }: Props) {
             <button
               key={cmd.name}
               onClick={() => selectCommand(cmd)}
+              onMouseEnter={() => setSelectedIndex(i)}
               className={cn(
                 "flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm",
                 i === selectedIndex
                   ? "bg-gray-700 text-gray-200"
-                  : "text-gray-400 hover:bg-gray-700",
+                  : "text-gray-400",
               )}
             >
               <span className="font-mono text-blue-400">{cmd.name}</span>
