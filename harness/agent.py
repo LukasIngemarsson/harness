@@ -37,6 +37,7 @@ MAX_ITERATIONS = 25
 MAX_TOOL_RETRIES = 2
 MAX_LLM_RETRIES = 3
 RETRY_DELAY = 1.0
+LLM_TIMEOUT = 120.0
 
 DANGEROUS_SHELL_PATTERNS = [
     (re.compile(r"\brm\b"), "destructive command: rm"),
@@ -95,6 +96,7 @@ class Agent:
         self.client = OpenAI(
             base_url=config["base_url"],
             api_key=config["api_key"],
+            timeout=LLM_TIMEOUT,
         )
         self.model = config["model"]
         self.config = config
@@ -318,6 +320,85 @@ class Agent:
             "agent_id": agent_id,
             "result": result or "(no output)",
         }
+
+    def compact(self) -> Iterator[dict]:
+        old_messages = (
+            self.conversation.get_messages_to_compact()
+        )
+        if not old_messages:
+            yield {
+                "type": EventType.SYSTEM_MESSAGE,
+                "content": (
+                    "Nothing to compact. Need more than"
+                    f" {RECENT_MESSAGES_TO_KEEP} messages"
+                    " in history (recent messages are"
+                    " always kept intact)."
+                ),
+            }
+            return
+
+        fmt = Conversation._format_tokens
+        old_count = len(self.conversation.messages)
+        old_tokens = fmt(
+            estimate_tokens(self.conversation.messages)
+        )
+
+        yield {
+            "type": EventType.SYSTEM_MESSAGE,
+            "content": (
+                f"Compacting {len(old_messages)} messages..."
+            ),
+        }
+
+        summary_prompt = [
+            {
+                "role": Role.SYSTEM,
+                "content": (
+                    "Summarize the following conversation"
+                    " concisely. Preserve key facts,"
+                    " decisions, tool results, and context"
+                    " the assistant needs to continue"
+                    " helping. Omit greetings and filler."
+                ),
+            },
+            {
+                "role": Role.USER,
+                "content": json.dumps(
+                    old_messages, indent=2
+                ),
+            },
+        ]
+
+        try:
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=summary_prompt,
+            )
+            summary = response.choices[0].message.content
+            if summary:
+                self.conversation.apply_compaction(summary)
+                new_tokens = fmt(
+                    estimate_tokens(
+                        self.conversation.messages
+                    )
+                )
+                yield {
+                    "type": EventType.SYSTEM_MESSAGE,
+                    "content": (
+                        f"Compacted {old_count} messages"
+                        f" → {len(self.conversation.messages)}."
+                        f" Tokens: {old_tokens}"
+                        f" → {new_tokens}"
+                    ),
+                }
+        except Exception as e:
+            logger.warning(
+                "Compaction failed: %s", e
+            )
+            yield {
+                "type": EventType.SYSTEM_MESSAGE,
+                "content": f"Compaction failed: {e}",
+            }
 
     def _add_tool_call_message(
         self, content: str, tool_calls: dict
@@ -549,85 +630,6 @@ class Agent:
 
         for t in threads:
             t.join()
-
-    def compact(self) -> Iterator[dict]:
-        old_messages = (
-            self.conversation.get_messages_to_compact()
-        )
-        if not old_messages:
-            yield {
-                "type": EventType.SYSTEM_MESSAGE,
-                "content": (
-                    "Nothing to compact. Need more than"
-                    f" {RECENT_MESSAGES_TO_KEEP} messages"
-                    " in history (recent messages are"
-                    " always kept intact)."
-                ),
-            }
-            return
-
-        fmt = Conversation._format_tokens
-        old_count = len(self.conversation.messages)
-        old_tokens = fmt(
-            estimate_tokens(self.conversation.messages)
-        )
-
-        yield {
-            "type": EventType.SYSTEM_MESSAGE,
-            "content": (
-                f"Compacting {len(old_messages)} messages..."
-            ),
-        }
-
-        summary_prompt = [
-            {
-                "role": Role.SYSTEM,
-                "content": (
-                    "Summarize the following conversation"
-                    " concisely. Preserve key facts,"
-                    " decisions, tool results, and context"
-                    " the assistant needs to continue"
-                    " helping. Omit greetings and filler."
-                ),
-            },
-            {
-                "role": Role.USER,
-                "content": json.dumps(
-                    old_messages, indent=2
-                ),
-            },
-        ]
-
-        try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=summary_prompt,
-            )
-            summary = response.choices[0].message.content
-            if summary:
-                self.conversation.apply_compaction(summary)
-                new_tokens = fmt(
-                    estimate_tokens(
-                        self.conversation.messages
-                    )
-                )
-                yield {
-                    "type": EventType.SYSTEM_MESSAGE,
-                    "content": (
-                        f"Compacted {old_count} messages"
-                        f" → {len(self.conversation.messages)}."
-                        f" Tokens: {old_tokens}"
-                        f" → {new_tokens}"
-                    ),
-                }
-        except Exception as e:
-            logger.warning(
-                "Compaction failed: %s", e
-            )
-            yield {
-                "type": EventType.SYSTEM_MESSAGE,
-                "content": f"Compaction failed: {e}",
-            }
 
     def _maybe_compact(self) -> Iterator[dict]:
         max_tokens = self.config.get(
