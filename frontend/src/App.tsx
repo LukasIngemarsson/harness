@@ -128,9 +128,18 @@ export default function App() {
         break;
 
       case EventType.Cleared:
-        setMessages([
-          { role: MessageRole.System, content: "Conversation cleared." },
-        ]);
+        setMessages((prev) => {
+          const clearMsg = prev.findLast(
+            (m) =>
+              m.role === MessageRole.User &&
+              m.content.toLowerCase() === "/clear",
+          );
+          const kept = clearMsg ? [clearMsg] : [];
+          return [
+            ...kept,
+            { role: MessageRole.System, content: "Conversation cleared." },
+          ];
+        });
         setTasks({});
         setTokenCount(null);
         setBusy(false);
