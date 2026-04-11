@@ -128,9 +128,18 @@ export default function App() {
         break;
 
       case EventType.Cleared:
-        setMessages([
-          { role: MessageRole.System, content: "Conversation cleared." },
-        ]);
+        setMessages((prev) => {
+          const clearMsg = prev.findLast(
+            (m) =>
+              m.role === MessageRole.User &&
+              m.content.toLowerCase() === "/clear",
+          );
+          const kept = clearMsg ? [clearMsg] : [];
+          return [
+            ...kept,
+            { role: MessageRole.System, content: "Conversation cleared." },
+          ];
+        });
         setTasks({});
         setTokenCount(null);
         setBusy(false);
@@ -254,9 +263,20 @@ export default function App() {
   }
 
   function handleSend(text: string) {
+    setMessages((prev) => [...prev, { role: MessageRole.User, content: text }]);
+    userScrolledRef.current = false;
+
     if (text.toLowerCase() === Command.Clear) {
       sendMessage(text);
       setProfile("default");
+      return;
+    }
+    if (text.toLowerCase() === Command.Compact) {
+      sendMessage(text);
+      return;
+    }
+    if (text.toLowerCase() === Command.Context) {
+      sendMessage(text);
       return;
     }
     if (text.toLowerCase().startsWith(Command.Mode)) {
@@ -265,7 +285,6 @@ export default function App() {
       sendMessage(text);
       return;
     }
-    setMessages((prev) => [...prev, { role: MessageRole.User, content: text }]);
     sendMessage(text);
     setBusy(true);
     setBusySince(Date.now());
@@ -300,7 +319,9 @@ export default function App() {
 
   useEffect(() => {
     if (!userScrolledRef.current) {
-      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+      requestAnimationFrame(() => {
+        bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+      });
     }
   }, [messages, busy]);
 

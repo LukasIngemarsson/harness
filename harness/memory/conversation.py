@@ -1,8 +1,21 @@
 import json
+import logging
 from pathlib import Path
 
 from harness.config import HISTORY_PATH
 from harness.utils.enums import Role
+
+logger = logging.getLogger(__name__)
+
+CHARS_PER_TOKEN = 4
+RECENT_MESSAGES_TO_KEEP = 10
+
+
+def estimate_tokens(messages: list[dict]) -> int:
+    total_chars = sum(
+        len(json.dumps(msg)) for msg in messages
+    )
+    return total_chars // CHARS_PER_TOKEN
 
 
 class Conversation:
@@ -24,6 +37,96 @@ class Conversation:
         self._messages.append(
             {"role": Role.TOOL, "tool_call_id": tool_call_id, "content": content}
         )
+
+    def needs_compaction(self, max_tokens: int) -> bool:
+        token_count = estimate_tokens(self._messages)
+        threshold = int(max_tokens * 0.75)
+        min_messages = RECENT_MESSAGES_TO_KEEP + 2
+        return (
+            token_count > threshold
+            and len(self._messages) > min_messages
+        )
+
+    def can_compact(self) -> bool:
+        return len(self._messages) > RECENT_MESSAGES_TO_KEEP + 1
+
+    def get_messages_to_compact(self) -> list[dict]:
+        if not self.can_compact():
+            return []
+        cut = len(self._messages) - RECENT_MESSAGES_TO_KEEP
+        return self._messages[1:cut]
+
+    def apply_compaction(self, summary: str) -> None:
+        cut = len(self._messages) - RECENT_MESSAGES_TO_KEEP
+        recent = self._messages[cut:]
+        self._messages = [
+            self._messages[0],
+            {
+                "role": Role.SYSTEM,
+                "content": (
+                    "Summary of earlier conversation:\n\n"
+                    + summary
+                ),
+            },
+            *recent,
+        ]
+        logger.info(
+            "Conversation compacted. Messages: %d, tokens: ~%d",
+            len(self._messages),
+            estimate_tokens(self._messages),
+        )
+
+    @staticmethod
+    def _format_tokens(n: int) -> str:
+        if n >= 1000:
+            return f"~{n / 1000:.1f}k"
+        return f"~{round(n, -2)}" if n >= 100 else f"~{n}"
+
+    def context_info(self) -> str:
+        total_tokens = estimate_tokens(self._messages)
+        counts: dict[str, int] = {}
+        has_summary = False
+
+        for msg in self._messages:
+            role = msg.get("role", "unknown")
+            counts[role] = counts.get(role, 0) + 1
+            if (
+                role == Role.SYSTEM
+                and "Summary of earlier conversation"
+                in msg.get("content", "")
+            ):
+                has_summary = True
+
+        lines = [
+            f"Messages: {len(self._messages)}",
+            f"Tokens: {self._format_tokens(total_tokens)}",
+            "",
+            "Breakdown:",
+        ]
+        for role, count in sorted(counts.items()):
+            lines.append(f"  {role}: {count}")
+
+        if has_summary:
+            # Find the summary and show a preview
+            for msg in self._messages:
+                content = msg.get("content", "")
+                if "Summary of earlier conversation" in content:
+                    summary_text = content.replace(
+                        "Summary of earlier conversation:\n\n",
+                        "",
+                    )
+                    preview = summary_text[:300]
+                    if len(summary_text) > 300:
+                        preview += "..."
+                    lines.append("")
+                    lines.append("Compaction summary:")
+                    lines.append(preview)
+                    break
+        else:
+            lines.append("")
+            lines.append("No compaction applied.")
+
+        return "\n".join(lines)
 
     @staticmethod
     def clear_history(path: Path = HISTORY_PATH) -> None:

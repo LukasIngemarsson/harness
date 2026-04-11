@@ -18,6 +18,8 @@ export enum EventType {
 export enum Command {
   Clear = "/clear",
   Mode = "/mode",
+  Compact = "/compact",
+  Context = "/context",
   Exit = "exit", // not used in the UI, but needed to pass sync test
 }
 

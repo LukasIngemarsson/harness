@@ -28,8 +28,11 @@ def load_config() -> dict:
         )
         sys.exit(1)
 
+    ctx = os.getenv("MAX_CONTEXT_TOKENS")
+
     return {
         "model": os.getenv("MODEL"),
         "base_url": os.getenv("BASE_URL"),
         "api_key": os.getenv("API_KEY"),
+        "max_context_tokens": int(ctx) if ctx else 128_000,
     }

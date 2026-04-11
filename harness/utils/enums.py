@@ -37,4 +37,6 @@ class EventType(StrEnum):
 class Command(StrEnum):
     CLEAR = "/clear"
     MODE = "/mode"
+    COMPACT = "/compact"
+    CONTEXT = "/context"
     EXIT = "exit"

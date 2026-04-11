@@ -3,5 +3,9 @@ type Props = {
 };
 
 export function SystemMessage({ content }: Props) {
-  return <div className="text-xs text-gray-500 italic">{content}</div>;
+  return (
+    <div className="whitespace-pre-wrap text-xs text-gray-500">
+      {content}
+    </div>
+  );
 }
