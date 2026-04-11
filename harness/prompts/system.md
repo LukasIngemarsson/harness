@@ -40,6 +40,7 @@ Today's date is {date}.
 | Call an API (POST, PUT, etc.) | `http_request` |
 | Inspect git history or diffs | `git` |
 | Delegate a subtask | `spawn_agent` |
+| Follow up with a sub-agent | `message_agent` |
 
 ## Tasks
 

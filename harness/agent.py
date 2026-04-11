@@ -17,6 +17,7 @@ from harness.memory.conversation import (
 from harness.memory.task import Task, get_task_store
 from harness.tools import TOOLS
 from harness.tools.base import ToolError
+from harness.tools.message_agent import MessageAgentTool
 from harness.tools.sub_agent import SubAgentTool
 from harness.tools.task_list import ListTasksTool
 from harness.tools.task_plan import PlanTaskTool
@@ -106,6 +107,7 @@ class Agent:
         self._tool_cache: dict[tuple, str] = (
             tool_cache if tool_cache is not None else {}
         )
+        self._child_agents: dict[str, "Agent"] = {}
 
     def run(self, message: str) -> Iterator[dict]:
         logger.info("User message: %s", message)
@@ -281,6 +283,7 @@ class Agent:
             Conversation(system_prompt),
             tool_cache=self._tool_cache,
         )
+        self._child_agents[agent_id] = child
 
         yield {
             "type": EventType.SUB_AGENT_START,
@@ -314,6 +317,46 @@ class Agent:
                 }
             if reflected:
                 result = reflected
+
+        yield {
+            "type": EventType.SUB_AGENT_END,
+            "agent_id": agent_id,
+            "result": result or "(no output)",
+        }
+
+    def message_child(
+        self, agent_id: str, message: str
+    ) -> Iterator[dict]:
+        child = self._child_agents.get(agent_id)
+        if not child:
+            yield {
+                "type": EventType.ERROR,
+                "content": f"No sub-agent with id '{agent_id}'",
+            }
+            return
+
+        logger.info(
+            "Messaging sub-agent %s: %s",
+            agent_id,
+            message[:100],
+        )
+
+        yield {
+            "type": EventType.SUB_AGENT_START,
+            "agent_id": agent_id,
+            "role": "follow-up",
+            "task": message,
+        }
+
+        result = ""
+        for event in child.run(message):
+            if event["type"] == EventType.TOKEN:
+                result += event["content"]
+            yield {
+                "type": EventType.SUB_AGENT_UPDATE,
+                "agent_id": agent_id,
+                "event": event,
+            }
 
         yield {
             "type": EventType.SUB_AGENT_END,
@@ -426,8 +469,9 @@ class Agent:
     ) -> Iterator[dict]:
         yield {"type": EventType.TOOL_START}
 
-        # Separate spawn calls from regular tool calls
+        # Separate agent calls from regular tool calls
         spawn_calls = {}
+        message_calls = {}
         regular_calls = {}
         for idx, tc in tool_calls.items():
             try:
@@ -446,6 +490,8 @@ class Agent:
 
             if name == SubAgentTool.name:
                 spawn_calls[idx] = (tc, args)
+            elif name == MessageAgentTool.name:
+                message_calls[idx] = (tc, args)
             else:
                 regular_calls[idx] = (tc, args)
 
@@ -514,6 +560,35 @@ class Agent:
                 spawn_calls
             )
 
+        # Execute message calls sequentially
+        for tc, args in message_calls.values():
+            logger.info(
+                "Message agent: %s(%s)", tc["name"], args
+            )
+            yield {
+                "type": EventType.TOOL_CALL,
+                "name": tc["name"],
+                "args": args,
+            }
+
+            agent_id = args.get("agent_id", "")
+            message = args.get("message", "")
+            result = ""
+            for event in self.message_child(
+                agent_id, message
+            ):
+                if event["type"] == EventType.SUB_AGENT_END:
+                    result = event["result"]
+                yield event
+
+            self.conversation.add_tool_result(
+                tc["id"], str(result)
+            )
+            yield {
+                "type": EventType.TOOL_RESULT,
+                "result": result,
+            }
+
         yield {"type": EventType.TOOL_END}
 
     def _execute_parallel_spawns(
@@ -542,8 +617,11 @@ class Agent:
                     result = sub_event["result"]
                 yield sub_event
 
+            tool_result = (
+                f"[agent_id={agent_id}]\n\n{result}"
+            )
             self.conversation.add_tool_result(
-                tc["id"], str(result)
+                tc["id"], tool_result
             )
             yield {
                 "type": EventType.TOOL_RESULT,
@@ -618,8 +696,12 @@ class Agent:
             if event.get("_done"):
                 done_count += 1
                 tc = agent_ids[event["agent_id"]]
+                tool_result = (
+                    f"[agent_id={event['agent_id']}]"
+                    f"\n\n{event['result']}"
+                )
                 self.conversation.add_tool_result(
-                    tc["id"], str(event["result"])
+                    tc["id"], tool_result
                 )
                 yield {
                     "type": EventType.TOOL_RESULT,
