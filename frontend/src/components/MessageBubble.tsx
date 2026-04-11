@@ -48,7 +48,11 @@ export function MessageBubble({ message, onConfirm }: Props) {
     case MessageRole.Task:
       return (
         <MessageWrapper>
-          <TaskProgress goal={message.goal} steps={message.steps} />
+          <TaskProgress
+            goal={message.goal}
+            steps={message.steps}
+            status={message.status}
+          />
         </MessageWrapper>
       );
 

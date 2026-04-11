@@ -6,6 +6,7 @@ import { Collapsible } from "./Collapsible";
 type Props = {
   goal: string;
   steps: TaskStep[];
+  status?: string;
 };
 
 const STATUS_DISPLAY: Record<string, { icon: string; color: string }> = {
@@ -18,14 +19,18 @@ const STATUS_DISPLAY: Record<string, { icon: string; color: string }> = {
 
 const DEFAULT_STATUS = { icon: "\u00B7", color: "text-gray-600" };
 
-export function TaskProgress({ goal, steps }: Props) {
+export function TaskProgress({ goal, steps, status }: Props) {
   const completed = steps.filter(
     (s) => s.status === TaskStatus.Completed,
   ).length;
+  const active = status && status !== TaskStatus.Completed;
 
   return (
     <Collapsible
-      className="rounded border border-gray-700 bg-gray-800/50 text-sm"
+      className={cn(
+        "rounded border border-gray-700 bg-gray-800/50 text-sm",
+        active && "sticky top-0 z-10 bg-gray-800",
+      )}
       header={
         <span className="px-3 py-2 font-medium text-gray-300">{goal}</span>
       }
