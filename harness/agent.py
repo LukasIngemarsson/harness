@@ -9,7 +9,11 @@ from threading import Event, Thread
 
 from openai import OpenAI
 
-from harness.memory.conversation import Conversation, estimate_tokens
+from harness.memory.conversation import (
+    RECENT_MESSAGES_TO_KEEP,
+    Conversation,
+    estimate_tokens,
+)
 from harness.memory.task import Task, get_task_store
 from harness.tools import TOOLS
 from harness.tools.base import ToolError
@@ -553,7 +557,12 @@ class Agent:
         if not old_messages:
             yield {
                 "type": EventType.SYSTEM_MESSAGE,
-                "content": "Nothing to compact.",
+                "content": (
+                    "Nothing to compact. Need more than"
+                    f" {RECENT_MESSAGES_TO_KEEP} messages"
+                    " in history (recent messages are"
+                    " always kept intact)."
+                ),
             }
             return
 
