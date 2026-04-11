@@ -36,6 +36,7 @@ export enum MessageRole {
   Assistant = "assistant",
   System = "system",
   Tool = "tool",
+  Task = "task",
   SubAgent = "sub_agent",
 }
 
@@ -97,6 +98,14 @@ export type AgentEvent =
   | SubAgentEndEvent
   | ToolConfirmEvent;
 
+export type TaskMessage = {
+  role: MessageRole.Task;
+  taskId: string;
+  goal: string;
+  status: string;
+  steps: TaskStep[];
+};
+
 export type SubAgentMessage = {
   role: MessageRole.SubAgent;
   agentId: string;
@@ -104,6 +113,7 @@ export type SubAgentMessage = {
   task: string;
   tokens: string;
   toolCalls: ToolCall[];
+  tasks: TaskMessage[];
   done: boolean;
 };
 
@@ -112,6 +122,7 @@ export type ChatMessage =
   | { role: MessageRole.Assistant; content: string; toolCalls?: ToolCall[] }
   | { role: MessageRole.Tool; calls: ToolCall[] }
   | { role: MessageRole.System; content: string }
+  | TaskMessage
   | SubAgentMessage;
 
 export type Task = {

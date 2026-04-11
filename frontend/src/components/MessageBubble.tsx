@@ -1,9 +1,10 @@
 import type { ChatMessage } from "../types";
-import { MessageRole } from "../types";
+import { MessageRole, TaskStatus } from "../types";
 import { AssistantMessage } from "./AssistantMessage";
 import { MessageWrapper } from "./MessageWrapper";
 import { SubAgentBlock } from "./SubAgentBlock";
 import { SystemMessage } from "./SystemMessage";
+import { TaskProgress } from "./TaskProgress";
 import { ToolBlock } from "./ToolBlock";
 import { UserMessage } from "./UserMessage";
 
@@ -44,6 +45,17 @@ export function MessageBubble({ message, onConfirm }: Props) {
         </MessageWrapper>
       );
 
+    case MessageRole.Task:
+      return (
+        <MessageWrapper sticky={message.status !== TaskStatus.Completed}>
+          <TaskProgress
+            goal={message.goal}
+            steps={message.steps}
+            status={message.status}
+          />
+        </MessageWrapper>
+      );
+
     case MessageRole.SubAgent:
       return (
         <MessageWrapper>
@@ -52,6 +64,7 @@ export function MessageBubble({ message, onConfirm }: Props) {
             task={message.task}
             tokens={message.tokens}
             toolCalls={message.toolCalls}
+            tasks={message.tasks}
             done={message.done}
           />
         </MessageWrapper>
