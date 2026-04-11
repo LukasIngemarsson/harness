@@ -319,7 +319,9 @@ export default function App() {
 
   useEffect(() => {
     if (!userScrolledRef.current) {
-      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+      requestAnimationFrame(() => {
+        bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+      });
     }
   }, [messages, busy]);
 

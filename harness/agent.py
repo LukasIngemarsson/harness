@@ -566,9 +566,10 @@ class Agent:
             }
             return
 
+        fmt = Conversation._format_tokens
         old_count = len(self.conversation.messages)
-        old_tokens = estimate_tokens(
-            self.conversation.messages
+        old_tokens = fmt(
+            estimate_tokens(self.conversation.messages)
         )
 
         yield {
@@ -605,16 +606,18 @@ class Agent:
             summary = response.choices[0].message.content
             if summary:
                 self.conversation.apply_compaction(summary)
-                new_tokens = estimate_tokens(
-                    self.conversation.messages
+                new_tokens = fmt(
+                    estimate_tokens(
+                        self.conversation.messages
+                    )
                 )
                 yield {
                     "type": EventType.SYSTEM_MESSAGE,
                     "content": (
                         f"Compacted {old_count} messages"
                         f" → {len(self.conversation.messages)}."
-                        f" Tokens: ~{old_tokens}"
-                        f" → ~{new_tokens}"
+                        f" Tokens: {old_tokens}"
+                        f" → {new_tokens}"
                     ),
                 }
         except Exception as e:

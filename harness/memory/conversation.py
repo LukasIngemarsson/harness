@@ -76,6 +76,12 @@ class Conversation:
             estimate_tokens(self._messages),
         )
 
+    @staticmethod
+    def _format_tokens(n: int) -> str:
+        if n >= 1000:
+            return f"~{n / 1000:.1f}k"
+        return f"~{round(n, -2)}" if n >= 100 else f"~{n}"
+
     def context_info(self) -> str:
         total_tokens = estimate_tokens(self._messages)
         counts: dict[str, int] = {}
@@ -93,7 +99,7 @@ class Conversation:
 
         lines = [
             f"Messages: {len(self._messages)}",
-            f"Tokens: ~{total_tokens:,}",
+            f"Tokens: {self._format_tokens(total_tokens)}",
             "",
             "Breakdown:",
         ]
