@@ -341,13 +341,15 @@ class Agent:
             message[:100],
         )
 
-        # Reopen the existing card
+        # Reopen the existing card with a labeled message
         yield {
             "type": EventType.SUB_AGENT_UPDATE,
             "agent_id": agent_id,
             "event": {
                 "type": EventType.TOKEN,
-                "content": f"\n\n---\n**Follow-up:** {message}\n\n",
+                "content": (
+                    f"\n\n[Coordinator]: {message}\n\n"
+                ),
             },
         }
 
