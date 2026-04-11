@@ -1,8 +1,21 @@
 import json
+import logging
 from pathlib import Path
 
 from harness.config import HISTORY_PATH
 from harness.utils.enums import Role
+
+logger = logging.getLogger(__name__)
+
+CHARS_PER_TOKEN = 4
+RECENT_MESSAGES_TO_KEEP = 10
+
+
+def estimate_tokens(messages: list[dict]) -> int:
+    total_chars = sum(
+        len(json.dumps(msg)) for msg in messages
+    )
+    return total_chars // CHARS_PER_TOKEN
 
 
 class Conversation:
@@ -23,6 +36,42 @@ class Conversation:
     def add_tool_result(self, tool_call_id: str, content: str) -> None:
         self._messages.append(
             {"role": Role.TOOL, "tool_call_id": tool_call_id, "content": content}
+        )
+
+    def needs_summarization(self, max_tokens: int) -> bool:
+        token_count = estimate_tokens(self._messages)
+        threshold = int(max_tokens * 0.75)
+        min_messages = RECENT_MESSAGES_TO_KEEP + 2
+        return (
+            token_count > threshold
+            and len(self._messages) > min_messages
+        )
+
+    def get_messages_to_summarize(self) -> list[dict]:
+        # Keep system prompt (index 0) and recent messages
+        if len(self._messages) <= RECENT_MESSAGES_TO_KEEP + 1:
+            return []
+        cut = len(self._messages) - RECENT_MESSAGES_TO_KEEP
+        return self._messages[1:cut]
+
+    def apply_summary(self, summary: str) -> None:
+        cut = len(self._messages) - RECENT_MESSAGES_TO_KEEP
+        recent = self._messages[cut:]
+        self._messages = [
+            self._messages[0],
+            {
+                "role": Role.SYSTEM,
+                "content": (
+                    "Summary of earlier conversation:\n\n"
+                    + summary
+                ),
+            },
+            *recent,
+        ]
+        logger.info(
+            "Conversation summarized. Messages: %d, tokens: ~%d",
+            len(self._messages),
+            estimate_tokens(self._messages),
         )
 
     @staticmethod

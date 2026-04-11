@@ -106,6 +106,8 @@ class Agent:
         self.conversation.add_user_message(message)
 
         for _ in range(MAX_ITERATIONS):
+            self._maybe_summarize()
+
             response = None
             for attempt in range(1, MAX_LLM_RETRIES + 1):
                 try:
@@ -543,6 +545,57 @@ class Agent:
 
         for t in threads:
             t.join()
+
+    def _maybe_summarize(self) -> None:
+        max_tokens = self.config.get(
+            "max_context_tokens", 128_000
+        )
+        if not self.conversation.needs_summarization(
+            max_tokens
+        ):
+            return
+
+        old_messages = (
+            self.conversation.get_messages_to_summarize()
+        )
+        if not old_messages:
+            return
+
+        logger.info(
+            "Summarizing %d old messages", len(old_messages)
+        )
+
+        summary_prompt = [
+            {
+                "role": Role.SYSTEM,
+                "content": (
+                    "Summarize the following conversation"
+                    " concisely. Preserve key facts,"
+                    " decisions, tool results, and context"
+                    " the assistant needs to continue"
+                    " helping. Omit greetings and filler."
+                ),
+            },
+            {
+                "role": Role.USER,
+                "content": json.dumps(
+                    old_messages, indent=2
+                ),
+            },
+        ]
+
+        try:
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=summary_prompt,
+            )
+            summary = response.choices[0].message.content
+            if summary:
+                self.conversation.apply_summary(summary)
+        except Exception as e:
+            logger.warning(
+                "Summarization failed, continuing: %s", e
+            )
 
     @staticmethod
     def _make_cache_key(
