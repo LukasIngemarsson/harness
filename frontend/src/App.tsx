@@ -264,7 +264,7 @@ export default function App() {
 
   function handleSend(text: string) {
     setMessages((prev) => [...prev, { role: MessageRole.User, content: text }]);
-    userScrolledRef.current = false;
+    setFollowScroll(true);
 
     if (text.toLowerCase() === Command.Clear) {
       sendMessage(text);
@@ -303,27 +303,13 @@ export default function App() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [busy]);
 
-  const userScrolledRef = useRef(false);
+  const [followScroll, setFollowScroll] = useState(true);
 
   useEffect(() => {
-    const chat = chatRef.current;
-    if (!chat) return;
-    function onScroll() {
-      const nearBottom =
-        chat!.scrollHeight - chat!.scrollTop - chat!.clientHeight < 150;
-      userScrolledRef.current = !nearBottom;
+    if (followScroll) {
+      bottomRef.current?.scrollIntoView();
     }
-    chat.addEventListener("scroll", onScroll);
-    return () => chat.removeEventListener("scroll", onScroll);
-  }, []);
-
-  useEffect(() => {
-    if (!userScrolledRef.current) {
-      requestAnimationFrame(() => {
-        bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-      });
-    }
-  }, [messages, busy]);
+  }, [messages, busy, followScroll]);
 
   const activeTask =
     Object.values(tasks)
@@ -338,9 +324,41 @@ export default function App() {
           "border-b border-gray-700 text-sm text-gray-500",
         )}
       >
-        <span>
+        <span className="flex items-center gap-2">
           Harness
-          <span className="ml-2 text-gray-600">/ {profile}</span>
+          <span className="text-gray-600">/ {profile}</span>
+          <button
+            onClick={() => setFollowScroll((f) => !f)}
+            className={cn(
+              "transition-colors",
+              followScroll
+                ? "text-blue-400 hover:text-blue-300"
+                : "text-gray-600 hover:text-gray-400",
+            )}
+            title={followScroll ? "Scroll locked" : "Scroll unlocked"}
+          >
+            <svg
+              viewBox="0 0 16 16"
+              className="h-3.5 w-3.5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              {followScroll ? (
+                <>
+                  <rect x="3.5" y="8" width="9" height="6.5" rx="1.5" />
+                  <path d="M5.5 8V5.5a2.5 2.5 0 0 1 5 0V8" />
+                </>
+              ) : (
+                <>
+                  <rect x="3.5" y="8" width="9" height="6.5" rx="1.5" />
+                  <path d="M5.5 8V5.5a2.5 2.5 0 0 1 5 0" />
+                </>
+              )}
+            </svg>
+          </button>
         </span>
         <div className="flex items-center gap-3">
           <span className="flex items-center gap-1 text-gray-500">
