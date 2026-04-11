@@ -4,6 +4,7 @@ import { AssistantMessage } from "./AssistantMessage";
 import { MessageWrapper } from "./MessageWrapper";
 import { SubAgentBlock } from "./SubAgentBlock";
 import { SystemMessage } from "./SystemMessage";
+import { TaskProgress } from "./TaskProgress";
 import { ToolBlock } from "./ToolBlock";
 import { UserMessage } from "./UserMessage";
 
@@ -44,6 +45,13 @@ export function MessageBubble({ message, onConfirm }: Props) {
         </MessageWrapper>
       );
 
+    case MessageRole.Task:
+      return (
+        <MessageWrapper>
+          <TaskProgress goal={message.goal} steps={message.steps} />
+        </MessageWrapper>
+      );
+
     case MessageRole.SubAgent:
       return (
         <MessageWrapper>
@@ -52,6 +60,7 @@ export function MessageBubble({ message, onConfirm }: Props) {
             task={message.task}
             tokens={message.tokens}
             toolCalls={message.toolCalls}
+            tasks={message.tasks}
             done={message.done}
           />
         </MessageWrapper>

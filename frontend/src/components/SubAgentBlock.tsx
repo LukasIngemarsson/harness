@@ -1,18 +1,27 @@
 import { useEffect, useRef } from "react";
 import { cn } from "../utils/cn";
 import { Collapsible } from "./Collapsible";
+import { TaskProgress } from "./TaskProgress";
 import { ToolBlock } from "./ToolBlock";
-import type { ToolCall } from "../types";
+import type { TaskMessage, ToolCall } from "../types";
 
 type Props = {
   role: string;
   task: string;
   tokens: string;
   toolCalls: ToolCall[];
+  tasks: TaskMessage[];
   done: boolean;
 };
 
-export function SubAgentBlock({ role, task, tokens, toolCalls, done }: Props) {
+export function SubAgentBlock({
+  role,
+  task,
+  tokens,
+  toolCalls,
+  tasks,
+  done,
+}: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -46,6 +55,11 @@ export function SubAgentBlock({ role, task, tokens, toolCalls, done }: Props) {
     >
       <div ref={scrollRef} className="mt-2 max-h-64 overflow-y-auto">
         <div className="mb-2 text-xs text-gray-400">{task}</div>
+        {tasks.map((t) => (
+          <div key={t.taskId} className="mb-2">
+            <TaskProgress goal={t.goal} steps={t.steps} />
+          </div>
+        ))}
         {toolCalls.map((call, i) => (
           <ToolBlock key={i} call={call} compact />
         ))}

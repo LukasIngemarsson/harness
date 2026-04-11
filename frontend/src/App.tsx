@@ -3,20 +3,18 @@ import type {
   AgentEvent,
   ChatMessage,
   SubAgentMessage,
-  Task,
+  TaskMessage,
   ToolCall,
 } from "./types";
-import { Command, EventType, MessageRole, TaskStatus } from "./types";
+import { Command, EventType, MessageRole } from "./types";
 import { useSocket } from "./hooks/useSocket";
 import { MessageBubble } from "./components/MessageBubble";
 import { ChatInput } from "./components/ChatInput";
-import { TaskProgress } from "./components/TaskProgress";
 import { ThinkingIndicator } from "./components/ThinkingIndicator";
 import { cn } from "./utils/cn";
 
 export default function App() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [tasks, setTasks] = useState<Record<string, Task>>({});
   const [busy, setBusy] = useState(false);
   const [busySince, setBusySince] = useState(0);
   const [model, setModel] = useState<string>("");
@@ -36,14 +34,19 @@ export default function App() {
     fetch("/api/history")
       .then((r) => r.json())
       .then((data) => {
-        if (data.messages?.length) setMessages(data.messages);
+        const msgs: ChatMessage[] = data.messages?.length ? data.messages : [];
         if (data.tasks?.length) {
-          const taskMap: Record<string, Task> = {};
           for (const t of data.tasks) {
-            taskMap[t.id] = t;
+            msgs.push({
+              role: MessageRole.Task,
+              taskId: t.id,
+              goal: t.goal,
+              status: t.status,
+              steps: t.steps,
+            });
           }
-          setTasks(taskMap);
         }
+        if (msgs.length) setMessages(msgs);
       })
       .catch(() => {});
   }, []);
@@ -100,12 +103,26 @@ export default function App() {
         break;
 
       case EventType.TaskUpdate:
-        setTasks((prev) => {
-          const next = { ...prev };
+        setMessages((prev) => {
+          const updated = [...prev];
           for (const t of event.tasks) {
-            next[t.id] = t;
+            const taskMsg: TaskMessage = {
+              role: MessageRole.Task,
+              taskId: t.id,
+              goal: t.goal,
+              status: t.status,
+              steps: t.steps,
+            };
+            const idx = updated.findIndex(
+              (m) => m.role === MessageRole.Task && m.taskId === t.id,
+            );
+            if (idx !== -1) {
+              updated[idx] = taskMsg;
+            } else {
+              updated.push(taskMsg);
+            }
           }
-          return next;
+          return updated;
         });
         break;
 
@@ -140,7 +157,6 @@ export default function App() {
             { role: MessageRole.System, content: "Conversation cleared." },
           ];
         });
-        setTasks({});
         setTokenCount(null);
         setBusy(false);
         break;
@@ -178,6 +194,7 @@ export default function App() {
             task: event.task,
             tokens: "",
             toolCalls: [],
+            tasks: [],
             done: false,
           },
         ]);
@@ -209,6 +226,24 @@ export default function App() {
               };
             }
             updated.toolCalls = calls;
+          } else if (inner.type === EventType.TaskUpdate) {
+            const taskMsgs = [...updated.tasks];
+            for (const t of inner.tasks) {
+              const tIdx = taskMsgs.findIndex((m) => m.taskId === t.id);
+              const taskMsg: TaskMessage = {
+                role: MessageRole.Task,
+                taskId: t.id,
+                goal: t.goal,
+                status: t.status,
+                steps: t.steps,
+              };
+              if (tIdx !== -1) {
+                taskMsgs[tIdx] = taskMsg;
+              } else {
+                taskMsgs.push(taskMsg);
+              }
+            }
+            updated.tasks = taskMsgs;
           }
           return [...prev.slice(0, idx), updated, ...prev.slice(idx + 1)];
         });
@@ -311,11 +346,6 @@ export default function App() {
     }
   }, [messages, busy, followScroll]);
 
-  const activeTask =
-    Object.values(tasks)
-      .filter((t) => t.status !== TaskStatus.Completed)
-      .at(-1) ?? null;
-
   return (
     <div className="flex h-screen flex-col bg-gray-900 text-gray-200">
       <header
@@ -387,14 +417,6 @@ export default function App() {
           />
         </div>
       </header>
-
-      {activeTask && (
-        <div className="border-b border-gray-700 px-5 py-3">
-          <div className="mx-auto max-w-3xl">
-            <TaskProgress goal={activeTask.goal} steps={activeTask.steps} />
-          </div>
-        </div>
-      )}
 
       <div
         ref={chatRef}

@@ -6,6 +6,7 @@ class Role(StrEnum):
     ASSISTANT = "assistant"
     USER = "user"
     TOOL = "tool"
+    TASK = "task"
     SUB_AGENT = "sub_agent"
 
 
