@@ -25,7 +25,7 @@ export function TaskProgress({ goal, steps, status }: Props) {
   ).length;
   return (
     <Collapsible
-      className="rounded border border-gray-700 bg-gray-800/50 pr-3 text-sm"
+      className="rounded border border-gray-700 bg-gray-800/50 text-sm"
       header={
         <span className="px-3 py-2 font-medium text-gray-300">{goal}</span>
       }

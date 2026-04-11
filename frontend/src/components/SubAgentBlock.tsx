@@ -33,7 +33,7 @@ export function SubAgentBlock({
   return (
     <Collapsible
       className={cn(
-        "my-2 rounded p-3",
+        "my-2 rounded py-3 pl-3",
         "border border-gray-700 bg-gray-800/30",
         "text-sm",
       )}

@@ -21,7 +21,7 @@ export function Collapsible({
   return (
     <div className={className}>
       <div
-        className="flex cursor-pointer items-center justify-between"
+        className="flex cursor-pointer items-center justify-between pr-3"
         onClick={() => setCollapsed((c) => !c)}
       >
         <div className="flex items-center gap-2">{header}</div>
