@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { cn } from "../utils/cn";
+import { ChevronIcon } from "./Icons";
 
 type Props = {
   header: React.ReactNode;
@@ -27,20 +28,12 @@ export function Collapsible({
         <div className="flex items-center gap-2">{header}</div>
         <div className="flex items-center gap-2">
           {headerRight}
-          <svg
-            viewBox="0 0 16 16"
+          <ChevronIcon
             className={cn(
-              "h-3.5 w-3.5 text-gray-500 transition-transform",
+              "text-gray-500 transition-transform",
               collapsed ? "-rotate-90" : "rotate-0",
             )}
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M4 6l4 4 4-4" />
-          </svg>
+          />
         </div>
       </div>
       {!collapsed && children}

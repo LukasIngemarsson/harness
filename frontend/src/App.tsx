@@ -11,6 +11,7 @@ import { useSocket } from "./hooks/useSocket";
 import { MessageBubble } from "./components/MessageBubble";
 import { ChatInput } from "./components/ChatInput";
 import { ThinkingIndicator } from "./components/ThinkingIndicator";
+import { LockIcon, TokenStackIcon, UnlockIcon } from "./components/Icons";
 import { cn } from "./utils/cn";
 
 export default function App() {
@@ -367,44 +368,12 @@ export default function App() {
             )}
             title={followScroll ? "Scroll locked" : "Scroll unlocked"}
           >
-            <svg
-              viewBox="0 0 16 16"
-              className="h-3.5 w-3.5"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              {followScroll ? (
-                <>
-                  <rect x="3.5" y="8" width="9" height="6.5" rx="1.5" />
-                  <path d="M5.5 8V5.5a2.5 2.5 0 0 1 5 0V8" />
-                </>
-              ) : (
-                <>
-                  <rect x="3.5" y="8" width="9" height="6.5" rx="1.5" />
-                  <path d="M5.5 8V5.5a2.5 2.5 0 0 1 5 0" />
-                </>
-              )}
-            </svg>
+            {followScroll ? <LockIcon /> : <UnlockIcon />}
           </button>
         </span>
         <div className="flex items-center gap-3">
           <span className="flex items-center gap-1 text-gray-500">
-            <svg
-              viewBox="0 0 16 16"
-              className="h-3.5 w-3.5"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-            >
-              <ellipse cx="8" cy="11" rx="5" ry="2" />
-              <ellipse cx="8" cy="8" rx="5" ry="2" />
-              <ellipse cx="8" cy="5" rx="5" ry="2" />
-              <line x1="3" y1="5" x2="3" y2="11" />
-              <line x1="13" y1="5" x2="13" y2="11" />
-            </svg>
+            <TokenStackIcon />
             {tokenCount !== null ? `${(tokenCount / 1000).toFixed(1)}k` : "–"}
           </span>
           {model && <span className="text-gray-400">{model}</span>}
