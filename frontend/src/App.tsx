@@ -210,7 +210,7 @@ export default function App() {
           );
           if (idx === -1) return prev;
           const msg = prev[idx] as SubAgentMessage;
-          const updated = { ...msg };
+          const updated = { ...msg, done: false };
           if (inner.type === EventType.Token) {
             updated.tokens += inner.content;
           } else if (inner.type === EventType.ToolCall) {

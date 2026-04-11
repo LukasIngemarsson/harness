@@ -30,6 +30,7 @@ Auto-discovered from `tools/`. Drop a `Tool` subclass in and it registers.
 - `plan_task` / `update_task` / `list_tasks` — Task planning and tracking
 - `save_memory` / `read_memory` — Persistent agent memory
 - `spawn_agent` — Spawn sub-agents with optional reflection pass
+- `message_agent` — Send follow-up messages to existing sub-agents
 
 ## Running
 
