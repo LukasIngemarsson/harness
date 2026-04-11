@@ -8,12 +8,12 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from harness.agent import Agent, serialize_tasks
+from harness.agent import Agent
 from harness.config import load_config
+from harness.enums import Command, EventType, Role
 from harness.memory.conversation import Conversation
-from harness.memory.task import get_task_store
+from harness.memory.task import get_task_store, serialize_tasks
 from harness.prompts import build_system_prompt, switch_mode
-from harness.utils.enums import Command, EventType, Role
 from harness.utils.log import setup_logging
 
 setup_logging()
@@ -43,39 +43,38 @@ def _convert_messages(messages: list[dict]) -> list[dict]:
     tool_call_map: dict[str, dict] = {}
 
     for msg in messages:
-        role = msg.get("role")
+        match msg.get("role"):
+            case Role.SYSTEM:
+                continue
 
-        if role == Role.SYSTEM:
-            continue
+            case Role.USER:
+                result.append({"role": Role.USER, "content": msg["content"]})
 
-        if role == Role.USER:
-            result.append({"role": Role.USER, "content": msg["content"]})
+            case Role.ASSISTANT:
+                tool_calls_raw = msg.get("tool_calls", [])
+                if tool_calls_raw:
+                    calls = []
+                    for tc in tool_calls_raw:
+                        fn = tc.get("function", {})
+                        name = fn.get("name", "")
+                        try:
+                            args = json.loads(fn.get("arguments", "{}"))
+                        except json.JSONDecodeError:
+                            args = {}
+                        call = {"name": name, "args": args}
+                        calls.append(call)
+                        tool_call_map[tc["id"]] = call
 
-        elif role == Role.ASSISTANT:
-            tool_calls_raw = msg.get("tool_calls", [])
-            if tool_calls_raw:
-                calls = []
-                for tc in tool_calls_raw:
-                    fn = tc.get("function", {})
-                    name = fn.get("name", "")
-                    try:
-                        args = json.loads(fn.get("arguments", "{}"))
-                    except json.JSONDecodeError:
-                        args = {}
-                    call = {"name": name, "args": args}
-                    calls.append(call)
-                    tool_call_map[tc["id"]] = call
+                    result.append({"role": Role.TOOL, "calls": calls})
 
-                result.append({"role": Role.TOOL, "calls": calls})
+                content = msg.get("content")
+                if content:
+                    result.append({"role": Role.ASSISTANT, "content": content})
 
-            content = msg.get("content")
-            if content:
-                result.append({"role": Role.ASSISTANT, "content": content})
-
-        elif role == Role.TOOL:
-            tc_id = msg.get("tool_call_id")
-            if tc_id and tc_id in tool_call_map:
-                tool_call_map[tc_id]["result"] = msg.get("content", "")
+            case Role.TOOL:
+                tc_id = msg.get("tool_call_id")
+                if tc_id and tc_id in tool_call_map:
+                    tool_call_map[tc_id]["result"] = msg.get("content", "")
 
     return result
 

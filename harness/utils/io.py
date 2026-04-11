@@ -1,4 +1,4 @@
-from harness.utils.enums import Role
+from harness.enums import Role
 
 
 def role_prefix(role: Role) -> str:

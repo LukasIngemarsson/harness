@@ -1,7 +1,7 @@
 import re
 from pathlib import Path
 
-from harness.utils.enums import Command, EventType, Role, Status
+from harness.enums import Command, EventType, Role, Status
 
 TYPES_TS = Path(__file__).parent.parent / "frontend" / "src" / "types.ts"
 

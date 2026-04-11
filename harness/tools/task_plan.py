@@ -26,7 +26,7 @@ class PlanTaskTool(Tool):
         "required": ["goal", "steps"],
     }
 
-    def execute(self, goal: str, steps: list, **kwargs: object) -> str:
+    def execute(self, goal: str, steps: list[str], **kwargs: object) -> str:
         task = get_task_store().create(goal, steps)
         step_list = "\n".join(
             f"  {i}. {s}" for i, s in enumerate(steps)

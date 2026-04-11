@@ -5,7 +5,7 @@ from datetime import datetime
 from pathlib import Path
 
 from harness.config import TASKS_PATH
-from harness.utils.enums import Status
+from harness.enums import Status
 
 
 @dataclass
@@ -90,6 +90,21 @@ class TaskStore:
 
         self._save()
         return task
+
+
+def serialize_tasks(tasks: list[Task]) -> list[dict]:
+    return [
+        {
+            "id": t.id,
+            "goal": t.goal,
+            "status": t.status,
+            "steps": [
+                {"description": s.description, "status": s.status}
+                for s in t.steps
+            ],
+        }
+        for t in tasks
+    ]
 
 
 _store_instance: TaskStore | None = None

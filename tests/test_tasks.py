@@ -1,5 +1,5 @@
+from harness.enums import Status
 from harness.memory.task import TaskStore
-from harness.utils.enums import Status
 
 
 class TestTaskStore:
