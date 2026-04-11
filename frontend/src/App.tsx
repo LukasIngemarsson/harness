@@ -274,6 +274,10 @@ export default function App() {
       sendMessage(text);
       return;
     }
+    if (text.toLowerCase() === Command.Context) {
+      sendMessage(text);
+      return;
+    }
     if (text.toLowerCase().startsWith(Command.Mode)) {
       const parts = text.split(/\s+/, 2);
       if (parts.length > 1) setProfile(parts[1].toLowerCase());

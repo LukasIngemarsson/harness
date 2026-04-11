@@ -120,6 +120,16 @@ async def websocket_endpoint(ws: WebSocket) -> None:
                     await ws.send_json(event)
                 continue
 
+            if message.lower() == Command.CONTEXT:
+                info = agent.conversation.context_info()
+                await ws.send_json(
+                    {
+                        "type": EventType.SYSTEM_MESSAGE,
+                        "content": info,
+                    }
+                )
+                continue
+
             if message.lower().startswith(Command.MODE):
                 result = switch_mode(message)
                 await ws.send_json(

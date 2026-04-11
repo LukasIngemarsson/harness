@@ -34,6 +34,10 @@ def main() -> None:
                     print(event["content"])
             print()
             continue
+        if user_input.lower() == Command.CONTEXT:
+            print(agent.conversation.context_info())
+            print()
+            continue
         if user_input.lower().startswith(Command.MODE):
             result = switch_mode(user_input)
             print(f"{result['message']}\n")

@@ -76,6 +76,52 @@ class Conversation:
             estimate_tokens(self._messages),
         )
 
+    def context_info(self) -> str:
+        total_tokens = estimate_tokens(self._messages)
+        counts: dict[str, int] = {}
+        has_summary = False
+
+        for msg in self._messages:
+            role = msg.get("role", "unknown")
+            counts[role] = counts.get(role, 0) + 1
+            if (
+                role == Role.SYSTEM
+                and "Summary of earlier conversation"
+                in msg.get("content", "")
+            ):
+                has_summary = True
+
+        lines = [
+            f"Messages: {len(self._messages)}",
+            f"Tokens: ~{total_tokens:,}",
+            "",
+            "Breakdown:",
+        ]
+        for role, count in sorted(counts.items()):
+            lines.append(f"  {role}: {count}")
+
+        if has_summary:
+            # Find the summary and show a preview
+            for msg in self._messages:
+                content = msg.get("content", "")
+                if "Summary of earlier conversation" in content:
+                    summary_text = content.replace(
+                        "Summary of earlier conversation:\n\n",
+                        "",
+                    )
+                    preview = summary_text[:300]
+                    if len(summary_text) > 300:
+                        preview += "..."
+                    lines.append("")
+                    lines.append("Compaction summary:")
+                    lines.append(preview)
+                    break
+        else:
+            lines.append("")
+            lines.append("No compaction applied.")
+
+        return "\n".join(lines)
+
     @staticmethod
     def clear_history(path: Path = HISTORY_PATH) -> None:
         if path.exists():

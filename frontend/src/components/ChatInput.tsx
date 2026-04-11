@@ -10,6 +10,7 @@ type CommandEntry = {
 const COMMANDS: CommandEntry[] = [
   { name: Command.Clear, description: "Clear conversation history" },
   { name: Command.Compact, description: "Compact conversation context" },
+  { name: Command.Context, description: "Show context window info" },
   {
     name: Command.Mode,
     description: "Switch agent profile",
