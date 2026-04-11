@@ -264,6 +264,7 @@ export default function App() {
 
   function handleSend(text: string) {
     setMessages((prev) => [...prev, { role: MessageRole.User, content: text }]);
+    userScrolledRef.current = false;
 
     if (text.toLowerCase() === Command.Clear) {
       sendMessage(text);
