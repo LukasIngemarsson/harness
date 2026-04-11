@@ -254,6 +254,8 @@ export default function App() {
   }
 
   function handleSend(text: string) {
+    setMessages((prev) => [...prev, { role: MessageRole.User, content: text }]);
+
     if (text.toLowerCase() === Command.Clear) {
       sendMessage(text);
       setProfile("default");
@@ -269,7 +271,6 @@ export default function App() {
       sendMessage(text);
       return;
     }
-    setMessages((prev) => [...prev, { role: MessageRole.User, content: text }]);
     sendMessage(text);
     setBusy(true);
     setBusySince(Date.now());
