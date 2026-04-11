@@ -35,7 +35,7 @@ class WebSearchTool(Tool):
         logger.info("Searching: %s", query)
         try:
             results = DDGS().text(
-                query, max_results=MAX_RESULTS, backend="google"
+                query, max_results=MAX_RESULTS
             )
         except Exception as e:
             raise ToolError(
