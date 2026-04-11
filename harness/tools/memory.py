@@ -1,4 +1,3 @@
-
 from harness.config import MEMORY_PATH
 from harness.tools.base import Tool
 

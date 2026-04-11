@@ -3,7 +3,7 @@ import logging
 from pathlib import Path
 
 from harness.config import HISTORY_PATH
-from harness.utils.enums import Role
+from harness.enums import Role
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +24,7 @@ class Conversation:
         self._messages = [{"role": Role.SYSTEM, "content": system_prompt}]
 
     @property
-    def messages(self) -> list:
+    def messages(self) -> list[dict]:
         return self._messages
 
     def add_user_message(self, content: str) -> None:

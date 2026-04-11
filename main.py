@@ -1,8 +1,8 @@
 from harness.agent import Agent
 from harness.config import load_config
+from harness.enums import Command, EventType, Role
 from harness.memory.conversation import Conversation
 from harness.prompts import build_system_prompt, switch_mode
-from harness.utils.enums import Command, EventType, Role
 from harness.utils.io import error_msg, role_prefix, tool_call_msg, tool_result_msg
 from harness.utils.log import setup_logging
 

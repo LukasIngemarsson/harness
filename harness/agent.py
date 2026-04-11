@@ -9,12 +9,13 @@ from threading import Event, Thread
 
 from openai import OpenAI
 
+from harness.enums import EventType, Role
 from harness.memory.conversation import (
     RECENT_MESSAGES_TO_KEEP,
     Conversation,
     estimate_tokens,
 )
-from harness.memory.task import Task, get_task_store
+from harness.memory.task import get_task_store, serialize_tasks
 from harness.tools import TOOLS
 from harness.tools.base import ToolError
 from harness.tools.message_agent import MessageAgentTool
@@ -22,7 +23,6 @@ from harness.tools.sub_agent import SubAgentTool
 from harness.tools.task_list import ListTasksTool
 from harness.tools.task_plan import PlanTaskTool
 from harness.tools.task_update import UpdateTaskTool
-from harness.utils.enums import EventType, Role
 
 logger = logging.getLogger(__name__)
 
@@ -40,51 +40,21 @@ MAX_LLM_RETRIES = 3
 RETRY_DELAY = 1.0
 LLM_TIMEOUT = 120.0
 
-DANGEROUS_SHELL_PATTERNS = [
+_DANGEROUS_SHELL_PATTERNS = [
     (re.compile(r"\brm\b"), "destructive command: rm"),
     (re.compile(r"\brmdir\b"), "destructive command: rmdir"),
     (re.compile(r"\bchmod\b"), "permission change: chmod"),
     (re.compile(r"\bmv\b"), "move/rename command: mv"),
 ]
 
-SENSITIVE_FILE_PATTERNS = [
+_SENSITIVE_FILE_PATTERNS = [
     re.compile(r"\.env($|\.)"),
     re.compile(r"credentials", re.IGNORECASE),
-    re.compile(r"secrets?\."), re.compile(r"\.pem$"),
+    re.compile(r"secrets?\."),
+    re.compile(r"\.pem$"),
     re.compile(r"\.key$"),
     re.compile(r"id_rsa"),
 ]
-
-
-def _check_dangerous(
-    name: str, args: dict
-) -> str | None:
-    if name == "run_shell":
-        cmd = args.get("command", "")
-        for pattern, reason in DANGEROUS_SHELL_PATTERNS:
-            if pattern.search(cmd):
-                return reason
-    if name in ("read_file", "write_file"):
-        path = args.get("path", "")
-        for pattern in SENSITIVE_FILE_PATTERNS:
-            if pattern.search(path):
-                return f"sensitive file: {path}"
-    return None
-
-
-def serialize_tasks(tasks: list[Task]) -> list[dict]:
-    return [
-        {
-            "id": t.id,
-            "goal": t.goal,
-            "status": t.status,
-            "steps": [
-                {"description": s.description, "status": s.status}
-                for s in t.steps
-            ],
-        }
-        for t in tasks
-    ]
 
 
 class Agent:
@@ -510,7 +480,7 @@ class Agent:
                 "args": args,
             }
 
-            danger_reason = _check_dangerous(name, args)
+            danger_reason = self._check_dangerous(name, args)
             if danger_reason:
                 logger.info(
                     "Dangerous tool call: %s — %s",
@@ -727,6 +697,22 @@ class Agent:
         ):
             return
         yield from self.compact()
+
+    @staticmethod
+    def _check_dangerous(
+        name: str, args: dict
+    ) -> str | None:
+        if name == "run_shell":
+            cmd = args.get("command", "")
+            for pattern, reason in _DANGEROUS_SHELL_PATTERNS:
+                if pattern.search(cmd):
+                    return reason
+        if name in ("read_file", "write_file"):
+            path = args.get("path", "")
+            for pattern in _SENSITIVE_FILE_PATTERNS:
+                if pattern.search(path):
+                    return f"sensitive file: {path}"
+        return None
 
     @staticmethod
     def _make_cache_key(
