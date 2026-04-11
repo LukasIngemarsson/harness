@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { cn } from "../utils/cn";
+import { AssistantMessage } from "./AssistantMessage";
 import { Collapsible } from "./Collapsible";
 import { TaskProgress } from "./TaskProgress";
 import { ToolBlock } from "./ToolBlock";
@@ -64,7 +65,12 @@ export function SubAgentBlock({
           <ToolBlock key={i} call={call} compact />
         ))}
         {tokens && (
-          <div className="mt-2 whitespace-pre-wrap text-gray-300">{tokens}</div>
+          <div className="mt-2">
+            <div className="mb-1 text-xs font-semibold text-green-400 uppercase">
+              Assistant
+            </div>
+            <AssistantMessage content={tokens} />
+          </div>
         )}
       </div>
     </Collapsible>
