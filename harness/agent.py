@@ -9,7 +9,7 @@ from threading import Event, Thread
 
 from openai import OpenAI
 
-from harness.memory.conversation import Conversation
+from harness.memory.conversation import Conversation, estimate_tokens
 from harness.memory.task import Task, get_task_store
 from harness.tools import TOOLS
 from harness.tools.base import ToolError
@@ -106,7 +106,7 @@ class Agent:
         self.conversation.add_user_message(message)
 
         for _ in range(MAX_ITERATIONS):
-            self._maybe_summarize()
+            yield from self._maybe_compact()
 
             response = None
             for attempt in range(1, MAX_LLM_RETRIES + 1):
@@ -546,24 +546,28 @@ class Agent:
         for t in threads:
             t.join()
 
-    def _maybe_summarize(self) -> None:
-        max_tokens = self.config.get(
-            "max_context_tokens", 128_000
-        )
-        if not self.conversation.needs_summarization(
-            max_tokens
-        ):
-            return
-
+    def compact(self) -> Iterator[dict]:
         old_messages = (
-            self.conversation.get_messages_to_summarize()
+            self.conversation.get_messages_to_compact()
         )
         if not old_messages:
+            yield {
+                "type": EventType.SYSTEM_MESSAGE,
+                "content": "Nothing to compact.",
+            }
             return
 
-        logger.info(
-            "Summarizing %d old messages", len(old_messages)
+        old_count = len(self.conversation.messages)
+        old_tokens = estimate_tokens(
+            self.conversation.messages
         )
+
+        yield {
+            "type": EventType.SYSTEM_MESSAGE,
+            "content": (
+                f"Compacting {len(old_messages)} messages..."
+            ),
+        }
 
         summary_prompt = [
             {
@@ -591,11 +595,37 @@ class Agent:
             )
             summary = response.choices[0].message.content
             if summary:
-                self.conversation.apply_summary(summary)
+                self.conversation.apply_compaction(summary)
+                new_tokens = estimate_tokens(
+                    self.conversation.messages
+                )
+                yield {
+                    "type": EventType.SYSTEM_MESSAGE,
+                    "content": (
+                        f"Compacted {old_count} messages"
+                        f" → {len(self.conversation.messages)}."
+                        f" Tokens: ~{old_tokens}"
+                        f" → ~{new_tokens}"
+                    ),
+                }
         except Exception as e:
             logger.warning(
-                "Summarization failed, continuing: %s", e
+                "Compaction failed: %s", e
             )
+            yield {
+                "type": EventType.SYSTEM_MESSAGE,
+                "content": f"Compaction failed: {e}",
+            }
+
+    def _maybe_compact(self) -> Iterator[dict]:
+        max_tokens = self.config.get(
+            "max_context_tokens", 128_000
+        )
+        if not self.conversation.needs_compaction(
+            max_tokens
+        ):
+            return
+        yield from self.compact()
 
     @staticmethod
     def _make_cache_key(

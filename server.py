@@ -115,6 +115,11 @@ async def websocket_endpoint(ws: WebSocket) -> None:
                 await ws.send_json({"type": EventType.CLEARED})
                 continue
 
+            if message.lower() == Command.COMPACT:
+                for event in agent.compact():
+                    await ws.send_json(event)
+                continue
+
             if message.lower().startswith(Command.MODE):
                 result = switch_mode(message)
                 await ws.send_json(
