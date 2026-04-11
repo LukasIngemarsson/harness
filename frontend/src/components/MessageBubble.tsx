@@ -1,5 +1,5 @@
 import type { ChatMessage } from "../types";
-import { MessageRole } from "../types";
+import { MessageRole, TaskStatus } from "../types";
 import { AssistantMessage } from "./AssistantMessage";
 import { MessageWrapper } from "./MessageWrapper";
 import { SubAgentBlock } from "./SubAgentBlock";
@@ -47,7 +47,7 @@ export function MessageBubble({ message, onConfirm }: Props) {
 
     case MessageRole.Task:
       return (
-        <MessageWrapper>
+        <MessageWrapper sticky={message.status !== TaskStatus.Completed}>
           <TaskProgress
             goal={message.goal}
             steps={message.steps}

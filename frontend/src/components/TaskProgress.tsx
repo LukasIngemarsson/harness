@@ -23,14 +23,9 @@ export function TaskProgress({ goal, steps, status }: Props) {
   const completed = steps.filter(
     (s) => s.status === TaskStatus.Completed,
   ).length;
-  const active = status && status !== TaskStatus.Completed;
-
   return (
     <Collapsible
-      className={cn(
-        "rounded border border-gray-700 bg-gray-800/50 text-sm",
-        active && "sticky top-0 z-10 bg-gray-800",
-      )}
+      className="rounded border border-gray-700 bg-gray-800/50 text-sm"
       header={
         <span className="px-3 py-2 font-medium text-gray-300">{goal}</span>
       }
