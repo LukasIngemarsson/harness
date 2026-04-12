@@ -36,9 +36,7 @@ class WebSearchTool(Tool):
     def execute(self, query: str, **kwargs: object) -> ToolResult:
         logger.info("Searching: %s", query)
 
-        api_key = os.getenv("BRAVE_API_KEY")
-        if not api_key:
-            raise ToolError("BRAVE_API_KEY not set in .env")
+        api_key = os.getenv("BRAVE_API_KEY", "")
 
         url = (
             f"https://api.search.brave.com/res/v1/web/search"
