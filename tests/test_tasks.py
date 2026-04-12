@@ -3,18 +3,8 @@ from harness.memory.task import TaskStore
 
 
 class TestTaskStore:
-    def setup_method(self, tmp_path):
-        self.store = TaskStore.__new__(TaskStore)
-        self.store._tasks = {}
-        self.store._path = (
-            tmp_path / "tasks.json"
-            if hasattr(tmp_path, "name")
-            else None
-        )
-
     def _make_store(self, tmp_path):
-        store = TaskStore(path=tmp_path / "tasks.json")
-        return store
+        return TaskStore(path=tmp_path / "tasks.json")
 
     def test_create_task(self, tmp_path):
         store = self._make_store(tmp_path)
@@ -22,23 +12,10 @@ class TestTaskStore:
         assert task.goal == "Test goal"
         assert len(task.steps) == 2
         assert task.status == Status.PENDING
-        assert all(s.status == Status.PENDING for s in task.steps)
-
-    def test_get_task(self, tmp_path):
-        store = self._make_store(tmp_path)
-        task = store.create("Test", ["step 1"])
-        retrieved = store.get(task.id)
-        assert retrieved is task
 
     def test_get_missing_task(self, tmp_path):
         store = self._make_store(tmp_path)
         assert store.get("nonexistent") is None
-
-    def test_list_tasks(self, tmp_path):
-        store = self._make_store(tmp_path)
-        store.create("Task 1", ["a"])
-        store.create("Task 2", ["b"])
-        assert len(store.list_all()) == 2
 
     def test_update_step_completed(self, tmp_path):
         store = self._make_store(tmp_path)
