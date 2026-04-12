@@ -1,6 +1,6 @@
 # Harness
 
-Agentic AI framework using the OpenAI-compatible client library. Works with local models (Ollama) and cloud APIs (OpenAI). Three interfaces: TUI, web UI, and plain REPL.
+Agentic AI framework using the OpenAI-compatible client library. Works with local models (Ollama) and cloud APIs (OpenAI). Two interfaces: TUI and web UI.
 
 ## Project Structure
 
@@ -12,7 +12,7 @@ Agentic AI framework using the OpenAI-compatible client library. Works with loca
 - `harness/memory/` — `Conversation` class with JSON persistence, `TaskStore` for task tracking
 - `harness/prompts/` — System prompt templating with memory injection
 - `harness/tools/` — Auto-discovered tools sandboxed to `.workspace/`
-- `harness/utils/` — I/O formatting, logging setup
+- `harness/utils/` — Logging setup
 - `tests/` — pytest suite for tools, config, and tasks
 - `frontend/` — Vite + React + TypeScript + Tailwind web UI
 
@@ -23,7 +23,7 @@ Auto-discovered from `tools/`. Drop a `Tool` subclass in and it registers.
 - `calculate` — Basic arithmetic
 - `read_file` / `write_file` — File ops in `.workspace/`
 - `run_shell` — Allowlisted shell commands (destructive commands require confirmation)
-- `web_search` — Google search via ddgs library
+- `web_search` — Web search via ddgs library
 - `read_url` — Fetch and extract text from any URL
 - `http_request` — Full HTTP client (GET, POST, PUT, PATCH, DELETE) for APIs
 - `git` — Read-only git commands (status, log, diff, show, blame, branch)
@@ -41,16 +41,16 @@ Auto-discovered from `tools/`. Drop a `Tool` subclass in and it registers.
 python tui.py
 ```
 
-### Web UI (development)
+### Web UI (with hot-reload)
 ```bash
 python run_dev.py                            # backend (port 8000, auto-reload)
 cd frontend && npm run dev                   # frontend (port 5173, proxies to 8000)
 ```
 
-### Web UI (production)
+### Web UI (pre-built)
 ```bash
 cd frontend && npm run build                 # outputs to static/
-uvicorn server:app                           # serves everything
+uvicorn server:app                           # serves everything on port 8000
 ```
 
 ## Dependencies

@@ -1,18 +1,7 @@
 from harness.memory.conversation import (
     RECENT_MESSAGES_TO_KEEP,
     Conversation,
-    estimate_tokens,
 )
-
-
-class TestEstimateTokens:
-    def test_empty_messages(self):
-        assert estimate_tokens([]) == 0
-
-    def test_basic_estimate(self):
-        msgs = [{"role": "user", "content": "a" * 400}]
-        tokens = estimate_tokens(msgs)
-        assert tokens > 0
 
 
 class TestCompaction:
@@ -59,10 +48,8 @@ class TestCompaction:
 
         assert conv.messages[0]["role"] == "system"
         assert "helpful assistant" in conv.messages[0]["content"]
-
         assert conv.messages[1]["role"] == "system"
         assert "Summary" in conv.messages[1]["content"]
-
         assert conv.messages[2:] == original_recent
 
     def test_apply_compaction_reduces_message_count(self):
