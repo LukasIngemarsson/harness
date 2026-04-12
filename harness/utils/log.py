@@ -8,10 +8,10 @@ _MAX_LOG_VALUE_LEN = 200
 
 class _OneLineFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
-        msg = super().format(record)
+        msg = super().format(record).replace("\n", " ")
         if len(msg) > _MAX_LOG_VALUE_LEN:
             msg = msg[:_MAX_LOG_VALUE_LEN] + "…"
-        return msg.replace("\n", " ")
+        return msg
 
 
 def setup_logging(filename: str | None = None) -> None:
@@ -22,7 +22,7 @@ def setup_logging(filename: str | None = None) -> None:
         else logging.StreamHandler()
     )
     handler.setFormatter(_OneLineFormatter(_LOG_FORMAT))
-    logging.basicConfig(
-        level=logging.INFO,
-        handlers=[handler],
-    )
+    root = logging.getLogger()
+    root.handlers.clear()
+    root.addHandler(handler)
+    root.setLevel(logging.INFO)

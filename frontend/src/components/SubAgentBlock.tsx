@@ -53,7 +53,7 @@ export function SubAgentBlock({
         ) : undefined
       }
     >
-      <div ref={scrollRef} className="mt-2 max-h-64 overflow-y-auto">
+      <div ref={scrollRef} className="mt-2 max-h-64 overflow-y-auto pr-3">
         <div className="mb-2 text-xs text-gray-400">{task}</div>
         {tasks.map((t) => (
           <div key={t.taskId} className="mb-2">

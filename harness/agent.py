@@ -38,6 +38,7 @@ _MAX_ITERATIONS = 25
 _MAX_TOOL_RETRIES = 2
 _MAX_LLM_RETRIES = 3
 _RETRY_DELAY = 1.0
+_MAX_SUB_AGENT_ITERATIONS = 10
 
 _DANGEROUS_SHELL_PATTERNS = [
     (re.compile(r"\brm\b"), "destructive command: rm"),
@@ -62,6 +63,7 @@ class Agent:
         config: dict,
         conversation: Conversation,
         tool_cache: dict | None = None,
+        is_sub_agent: bool = False,
     ) -> None:
         self.client = OpenAI(
             base_url=config["base_url"],
@@ -82,15 +84,24 @@ class Agent:
             tool_cache if tool_cache is not None else {}
         )
         self._child_agents: dict[str, "Agent"] = {}
+        self._cancelled = False
+        self._max_iterations = (
+            _MAX_SUB_AGENT_ITERATIONS
+            if is_sub_agent
+            else _MAX_ITERATIONS
+        )
 
     def run(self, message: str) -> Iterator[dict]:
         logger.info("User message: %s", message)
         self.conversation.add_user_message(message)
 
-        for _ in range(_MAX_ITERATIONS):
+        for _ in range(self._max_iterations):
+            if self._cancelled:
+                break
             yield from self._maybe_compact()
 
             response = None
+            logger.info("LLM request starting")
             for attempt in range(1, _MAX_LLM_RETRIES + 1):
                 try:
                     response = self.client.chat.completions.create(
@@ -121,6 +132,7 @@ class Agent:
             if response is None:
                 break
 
+            logger.info("LLM streaming started")
             content = ""
             tool_calls = {}
             usage = None
@@ -200,7 +212,6 @@ class Agent:
                             "content": content,
                         }
                     )
-                get_task_store().clear()
                 yield {"type": EventType.DONE, "usage": usage}
                 break
 
@@ -296,6 +307,7 @@ class Agent:
             self.config,
             Conversation(system_prompt),
             tool_cache=self._tool_cache,
+            is_sub_agent=True,
         )
         self._child_agents[agent_id] = child
 
@@ -712,7 +724,7 @@ class Agent:
         total = len(threads)
         while done_count < total:
             try:
-                event = queue.get(timeout=120)
+                event = queue.get(timeout=75)
             except Exception:
                 logger.error(
                     "Sub-agent queue timed out, %d/%d done",
@@ -797,13 +809,18 @@ class Agent:
         last_error = ""
         for attempt in range(1, _MAX_TOOL_RETRIES + 1):
             try:
+                logger.info("Executing tool: %s", name)
                 result = tool.execute(**args)
+                logger.info("Tool finished: %s", name)
             except ToolError as e:
                 last_error = f"Error: {e}"
-                if not e.retryable or attempt >= _MAX_TOOL_RETRIES:
+                if (
+                    not e.retryable
+                    or attempt >= _MAX_TOOL_RETRIES
+                ):
                     return ToolResult(text=last_error)
                 logger.warning(
-                    "Tool %s attempt %d failed (retryable): %s",
+                    "Tool %s attempt %d failed: %s",
                     name,
                     attempt,
                     e,
@@ -815,7 +832,6 @@ class Agent:
                     text=f"Error: {type(e).__name__}: {e}"
                 )
 
-            # Cache successful results for idempotent tools
             if tool.cacheable:
                 cache_key = self._make_cache_key(name, args)
                 self._tool_cache[cache_key] = result

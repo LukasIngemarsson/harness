@@ -263,6 +263,7 @@ def main() -> None:
                     case EventType.DONE:
                         _render_assistant(tokens)
                         tokens = ""
+                        known_tasks.clear()
         except KeyboardInterrupt:
             conversation.drop_last_incomplete()
             conversation.save()
