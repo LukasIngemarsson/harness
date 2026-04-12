@@ -1,4 +1,4 @@
-# NOTE: Uses the ddgs metasearch library (Google backend).
+# NOTE: Uses the ddgs metasearch library.
 # Intended for personal/educational use only.
 import logging
 

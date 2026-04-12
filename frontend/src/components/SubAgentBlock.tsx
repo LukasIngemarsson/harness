@@ -57,7 +57,7 @@ export function SubAgentBlock({
         <div className="mb-2 text-xs text-gray-400">{task}</div>
         {tasks.map((t) => (
           <div key={t.taskId} className="mb-2">
-            <TaskProgress goal={t.goal} steps={t.steps} status={t.status} />
+            <TaskProgress goal={t.goal} steps={t.steps} />
           </div>
         ))}
         {toolCalls.map((call, i) => (
