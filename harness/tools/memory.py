@@ -1,5 +1,5 @@
 from harness.config import MEMORY_PATH
-from harness.tools.base import Tool
+from harness.tools.base import Tool, ToolResult
 
 
 class SaveMemoryTool(Tool):
@@ -22,12 +22,12 @@ class SaveMemoryTool(Tool):
         "required": ["content"],
     }
 
-    def execute(self, content: str, **kwargs: object) -> str:
+    def execute(self, content: str, **kwargs: object) -> ToolResult:
         MEMORY_PATH.parent.mkdir(parents=True, exist_ok=True)
         existing = MEMORY_PATH.read_text() if MEMORY_PATH.exists() else ""
         separator = "\n" if existing.strip() else ""
         MEMORY_PATH.write_text(existing + separator + content + "\n")
-        return "Saved to memory."
+        return ToolResult(text="Saved to memory.")
 
 
 class ReadMemoryTool(Tool):
@@ -43,8 +43,8 @@ class ReadMemoryTool(Tool):
         "required": [],
     }
 
-    def execute(self, **kwargs: object) -> str:
+    def execute(self, **kwargs: object) -> ToolResult:
         if not MEMORY_PATH.exists():
-            return "Memory is empty."
+            return ToolResult(text="Memory is empty.")
         content = MEMORY_PATH.read_text().strip()
-        return content if content else "Memory is empty."
+        return ToolResult(text=content if content else "Memory is empty.")

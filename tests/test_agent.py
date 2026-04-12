@@ -1,7 +1,7 @@
 from unittest.mock import MagicMock, patch
 
 from harness.agent import TOOL_MAP, Agent
-from harness.tools.base import ToolError
+from harness.tools.base import ToolError, ToolResult
 
 
 class TestToolCache:
@@ -12,7 +12,7 @@ class TestToolCache:
     def test_cacheable_tool_returns_cached_result(self):
         mock_tool = MagicMock()
         mock_tool.cacheable = True
-        mock_tool.execute.return_value = "search results"
+        mock_tool.execute.return_value = ToolResult(text="search results")
 
         with patch.dict(TOOL_MAP, {"web_search": mock_tool}):
             result1 = self.agent._execute_single_tool(
@@ -22,14 +22,14 @@ class TestToolCache:
                 "web_search", {"query": "test"}
             )
 
-        assert result1 == "search results"
-        assert result2 == "search results"
+        assert result1.text == "search results"
+        assert result2.text == "search results"
         assert mock_tool.execute.call_count == 1
 
     def test_non_cacheable_tool_always_executes(self):
         mock_tool = MagicMock()
         mock_tool.cacheable = False
-        mock_tool.execute.return_value = "result"
+        mock_tool.execute.return_value = ToolResult(text="result")
 
         with patch.dict(TOOL_MAP, {"run_shell": mock_tool}):
             self.agent._execute_single_tool(
@@ -44,7 +44,10 @@ class TestToolCache:
     def test_different_args_not_cached(self):
         mock_tool = MagicMock()
         mock_tool.cacheable = True
-        mock_tool.execute.side_effect = ["result A", "result B"]
+        mock_tool.execute.side_effect = [
+            ToolResult(text="result A"),
+            ToolResult(text="result B"),
+        ]
 
         with patch.dict(TOOL_MAP, {"web_search": mock_tool}):
             r1 = self.agent._execute_single_tool(
@@ -54,8 +57,8 @@ class TestToolCache:
                 "web_search", {"query": "bar"}
             )
 
-        assert r1 == "result A"
-        assert r2 == "result B"
+        assert r1.text == "result A"
+        assert r2.text == "result B"
         assert mock_tool.execute.call_count == 2
 
     def test_error_result_not_cached(self):
@@ -64,7 +67,7 @@ class TestToolCache:
         mock_tool.execute.side_effect = [
             ToolError("timeout", retryable=True),
             ToolError("timeout", retryable=True),
-            "actual result",
+            ToolResult(text="actual result"),
         ]
 
         with patch.dict(TOOL_MAP, {"web_search": mock_tool}):
@@ -75,10 +78,8 @@ class TestToolCache:
                 "web_search", {"query": "test"}
             )
 
-        # First call retries once then fails
-        assert r1 == "Error: timeout"
-        # Second call executes again (error not cached)
-        assert r2 == "actual result"
+        assert r1.text == "Error: timeout"
+        assert r2.text == "actual result"
 
 
 class TestToolRetry:
@@ -92,7 +93,7 @@ class TestToolRetry:
         mock_tool.cacheable = False
         mock_tool.execute.side_effect = [
             ToolError("connection timeout", retryable=True),
-            "success",
+            ToolResult(text="success"),
         ]
 
         with patch.dict(TOOL_MAP, {"read_url": mock_tool}):
@@ -100,7 +101,7 @@ class TestToolRetry:
                 "read_url", {"url": "http://example.com"}
             )
 
-        assert result == "success"
+        assert result.text == "success"
         assert mock_tool.execute.call_count == 2
         mock_sleep.assert_called_once()
 
@@ -114,7 +115,7 @@ class TestToolRetry:
                 "read_file", {"path": "missing.txt"}
             )
 
-        assert result == "Error: file not found"
+        assert result.text == "Error: file not found"
         assert mock_tool.execute.call_count == 1
 
     @patch("harness.agent.time.sleep")
@@ -130,7 +131,7 @@ class TestToolRetry:
                 "read_url", {"url": "http://example.com"}
             )
 
-        assert result == "Error: server down"
+        assert result.text == "Error: server down"
         assert mock_tool.execute.call_count == 2
 
     def test_no_retry_on_type_error(self):
@@ -143,5 +144,5 @@ class TestToolRetry:
                 "read_url", {"url": "http://example.com"}
             )
 
-        assert "Error:" in result
+        assert "Error:" in result.text
         assert mock_tool.execute.call_count == 1

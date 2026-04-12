@@ -1,4 +1,4 @@
-from harness.tools.base import Tool
+from harness.tools.base import Tool, ToolResult
 
 
 class MessageAgentTool(Tool):
@@ -33,5 +33,5 @@ class MessageAgentTool(Tool):
 
     def execute(
         self, agent_id: str, message: str, **kwargs: object
-    ) -> str:
-        return "Error: message_agent must be called via Agent"
+    ) -> ToolResult:
+        return ToolResult(text="Error: message_agent must be called via Agent")

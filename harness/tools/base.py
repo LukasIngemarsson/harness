@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 
 
 class ToolError(Exception):
@@ -9,6 +10,13 @@ class ToolError(Exception):
         self.retryable = retryable
 
 
+@dataclass
+class ToolResult:
+    text: str
+    image_base64: str | None = None
+    media_type: str | None = None
+
+
 class Tool(ABC):
     name: str
     description: str
@@ -16,8 +24,9 @@ class Tool(ABC):
     cacheable: bool = False
 
     @abstractmethod
-    def execute(self, **kwargs: object) -> str:
+    def execute(self, **kwargs: object) -> ToolResult:
         raise NotImplementedError
+
 
     def to_api_format(self) -> dict:
         return {

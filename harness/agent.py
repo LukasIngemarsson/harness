@@ -17,7 +17,7 @@ from harness.memory.conversation import (
 )
 from harness.memory.task import get_task_store, serialize_tasks
 from harness.tools import TOOLS
-from harness.tools.base import ToolError
+from harness.tools.base import ToolError, ToolResult
 from harness.tools.message_agent import MessageAgentTool
 from harness.tools.sub_agent import SubAgentTool
 from harness.tools.task_list import ListTasksTool
@@ -503,7 +503,8 @@ class Agent:
                     f" {tc['arguments']}",
                 }
                 self.conversation.add_tool_result(
-                    tc["id"], "Error: malformed arguments"
+                    tc["id"],
+                    ToolResult(text="Error: malformed arguments"),
                 )
                 continue
 
@@ -539,30 +540,29 @@ class Agent:
                 }
                 approved = self._confirm_queue.get()
                 if not approved:
-                    result = (
-                        "Tool call denied by user: "
+                    denied = ToolResult(
+                        text="Tool call denied by user: "
                         + danger_reason
                     )
                     logger.info("Tool call denied: %s", name)
                     yield {
                         "type": EventType.TOOL_RESULT,
-                        "result": result,
+                        "result": denied.text,
                     }
                     self.conversation.add_tool_result(
-                        tc["id"], result
+                        tc["id"], denied
                     )
                     continue
 
             result = self._execute_single_tool(name, args)
 
-            logger.info("Tool result: %s", result)
+            logger.info("Tool result: %s", result.text)
             yield {
                 "type": EventType.TOOL_RESULT,
-                "result": result,
+                "result": result.text,
             }
-
             self.conversation.add_tool_result(
-                tc["id"], str(result)
+                tc["id"], result
             )
 
             if name in _TASK_TOOL_NAMES:
@@ -601,7 +601,7 @@ class Agent:
                 yield event
 
             self.conversation.add_tool_result(
-                tc["id"], str(result)
+                tc["id"], ToolResult(text=str(result))
             )
             yield {
                 "type": EventType.TOOL_RESULT,
@@ -640,7 +640,7 @@ class Agent:
                 f"[agent_id={agent_id}]\n\n{result}"
             )
             self.conversation.add_tool_result(
-                tc["id"], tool_result
+                tc["id"], ToolResult(text=tool_result)
             )
             yield {
                 "type": EventType.TOOL_RESULT,
@@ -732,7 +732,7 @@ class Agent:
                     f"\n\n{event['result']}"
                 )
                 self.conversation.add_tool_result(
-                    tc["id"], tool_result
+                    tc["id"], ToolResult(text=tool_result)
                 )
                 yield {
                     "type": EventType.TOOL_RESULT,
@@ -778,9 +778,9 @@ class Agent:
 
     def _execute_single_tool(
         self, name: str, args: dict
-    ) -> str:
+    ) -> ToolResult:
         if name not in TOOL_MAP:
-            return f"Error: tool '{name}' not found"
+            return ToolResult(text=f"Error: tool '{name}' not found")
 
         tool = TOOL_MAP[name]
 
@@ -798,12 +798,10 @@ class Agent:
         for attempt in range(1, _MAX_TOOL_RETRIES + 1):
             try:
                 result = tool.execute(**args)
-            except TypeError as e:
-                return f"Error: {e}"
             except ToolError as e:
                 last_error = f"Error: {e}"
                 if not e.retryable or attempt >= _MAX_TOOL_RETRIES:
-                    return last_error
+                    return ToolResult(text=last_error)
                 logger.warning(
                     "Tool %s attempt %d failed (retryable): %s",
                     name,
@@ -812,6 +810,10 @@ class Agent:
                 )
                 time.sleep(_RETRY_DELAY)
                 continue
+            except Exception as e:
+                return ToolResult(
+                    text=f"Error: {type(e).__name__}: {e}"
+                )
 
             # Cache successful results for idempotent tools
             if tool.cacheable:
@@ -820,4 +822,6 @@ class Agent:
 
             return result
 
-        return last_error or "Error: tool execution failed"
+        return ToolResult(
+            text=last_error or "Error: tool execution failed"
+        )

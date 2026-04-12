@@ -2,7 +2,7 @@ import shlex
 import subprocess
 
 from harness.config import WORKSPACE_DIR
-from harness.tools.base import Tool, ToolError
+from harness.tools.base import Tool, ToolError, ToolResult
 
 _TIMEOUT_SECONDS = 30
 _ALLOWED_SUBCOMMANDS = {
@@ -44,7 +44,7 @@ class GitTool(Tool):
         "required": ["command"],
     }
 
-    def execute(self, command: str, **kwargs: object) -> str:
+    def execute(self, command: str, **kwargs: object) -> ToolResult:
         try:
             parts = shlex.split(command)
         except ValueError as e:
@@ -83,4 +83,4 @@ class GitTool(Tool):
         if len(output) > _MAX_OUTPUT_CHARS:
             output = output[:_MAX_OUTPUT_CHARS] + "\n\n[truncated]"
 
-        return output
+        return ToolResult(text=output)

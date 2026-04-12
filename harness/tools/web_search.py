@@ -4,7 +4,7 @@ import logging
 
 from ddgs import DDGS
 
-from harness.tools.base import Tool, ToolError
+from harness.tools.base import Tool, ToolError, ToolResult
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +31,7 @@ class WebSearchTool(Tool):
         "required": ["query"],
     }
 
-    def execute(self, query: str, **kwargs: object) -> str:
+    def execute(self, query: str, **kwargs: object) -> ToolResult:
         logger.info("Searching: %s", query)
         try:
             results = DDGS().text(
@@ -43,7 +43,7 @@ class WebSearchTool(Tool):
             )
 
         if not results:
-            return "No results found."
+            return ToolResult(text="No results found.")
 
         lines = []
         for r in results:
@@ -52,4 +52,4 @@ class WebSearchTool(Tool):
             lines.append(f"URL: {r.get('href', '')}")
             lines.append("")
 
-        return "\n".join(lines).strip()
+        return ToolResult(text="\n".join(lines).strip())
