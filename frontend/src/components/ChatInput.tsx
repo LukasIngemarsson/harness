@@ -164,11 +164,11 @@ export function ChatInput({
               "disabled:opacity-50",
             )}
           />
-          <div className="flex items-center justify-between px-2 pb-2">
+          <div className="flex items-end justify-between p-1.5">
             <button
               onClick={onToggleScroll}
               className={cn(
-                "rounded p-1 transition-colors",
+                "p-1 transition-colors",
                 followScroll
                   ? "text-blue-400 hover:text-blue-300"
                   : "text-gray-600 hover:text-gray-400",

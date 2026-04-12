@@ -1,6 +1,6 @@
 from harness.enums import Status
 from harness.memory.task import get_task_store
-from harness.tools.base import Tool, ToolError, ToolResult
+from harness.tools.base import Tool, ToolResult
 
 
 class UpdateTaskTool(Tool):
@@ -47,8 +47,9 @@ class UpdateTaskTool(Tool):
             task_id, int(step_index), status, result or None
         )
         if not task:
-            raise ToolError(
-                f"task '{task_id}' or step {step_index} not found"
+            return ToolResult(
+                text=f"Task '{task_id}' no longer exists."
+                " Continue without updating."
             )
         step = task.steps[int(step_index)]
         return ToolResult(

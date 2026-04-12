@@ -16,7 +16,7 @@ from harness.memory.task import get_task_store, serialize_tasks
 from harness.prompts import build_system_prompt, switch_mode
 from harness.utils.log import setup_logging
 
-setup_logging()
+setup_logging("server.log")
 logger = logging.getLogger(__name__)
 
 config = load_config()
@@ -153,6 +153,8 @@ async def websocket_endpoint(ws: WebSocket) -> None:
 
             def _run_agent() -> None:
                 for event in agent.run(message):
+                    if agent._cancelled:
+                        break
                     loop.call_soon_threadsafe(event_queue.put_nowait, event)
                 loop.call_soon_threadsafe(event_queue.put_nowait, None)
 
@@ -160,7 +162,22 @@ async def websocket_endpoint(ws: WebSocket) -> None:
             thread.start()
 
             while True:
-                event = await event_queue.get()
+                try:
+                    event = await asyncio.wait_for(
+                        event_queue.get(), timeout=90
+                    )
+                except asyncio.TimeoutError:
+                    logger.error("Agent event queue timed out")
+                    await ws.send_json(
+                        {
+                            "type": EventType.ERROR,
+                            "content": "Request timed out",
+                        }
+                    )
+                    await ws.send_json(
+                        {"type": EventType.DONE, "usage": None}
+                    )
+                    break
                 if event is None:
                     break
                 await ws.send_json(event)
@@ -170,10 +187,11 @@ async def websocket_endpoint(ws: WebSocket) -> None:
                     agent.confirm(approved)
                 await asyncio.sleep(0)
 
-            thread.join()
+            thread.join(timeout=5)
 
     except WebSocketDisconnect:
         logger.info("WebSocket disconnected")
+        agent._cancelled = True
         conversation.save()
     except Exception as e:
         logger.error("WebSocket error: %s", e, exc_info=True)
