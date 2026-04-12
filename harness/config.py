@@ -15,7 +15,7 @@ LOG_DIR = Path.cwd() / ".logs"
 
 WORKSPACE_DIR.mkdir(exist_ok=True)
 
-_REQUIRED_VARS = ["MODEL", "BASE_URL", "API_KEY"]
+_REQUIRED_VARS = ["MODEL", "BASE_URL", "OPENAI_API_KEY", "BRAVE_API_KEY"]
 
 
 def load_config() -> dict:
@@ -33,6 +33,6 @@ def load_config() -> dict:
     return {
         "model": os.getenv("MODEL"),
         "base_url": os.getenv("BASE_URL"),
-        "api_key": os.getenv("API_KEY"),
+        "api_key": os.getenv("OPENAI_API_KEY"),
         "max_context_tokens": int(ctx) if ctx else 128_000,
     }
