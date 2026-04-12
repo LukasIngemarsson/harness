@@ -1,6 +1,7 @@
-import { useState, useRef, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Command } from "../types";
 import { cn } from "../utils/cn";
+import { LockIcon, UnlockIcon } from "./Icons";
 
 type CommandEntry = {
   name: Command;
@@ -17,17 +18,28 @@ const COMMANDS: CommandEntry[] = [
   },
 ];
 
+const MAX_HEIGHT = 200;
+
 type Props = {
   onSend: (text: string) => void;
   onCancel: () => void;
   busy: boolean;
   disabled: boolean;
+  followScroll: boolean;
+  onToggleScroll: () => void;
 };
 
-export function ChatInput({ onSend, onCancel, busy, disabled }: Props) {
+export function ChatInput({
+  onSend,
+  onCancel,
+  busy,
+  disabled,
+  followScroll,
+  onToggleScroll,
+}: Props) {
   const [input, setInput] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const isCommandMode = input.startsWith("/");
   const filteredCommands = isCommandMode
@@ -41,11 +53,21 @@ export function ChatInput({ onSend, onCancel, busy, disabled }: Props) {
     setSelectedIndex(0);
   }, [input]);
 
+  function resizeTextarea() {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, MAX_HEIGHT)}px`;
+  }
+
   function handleSend() {
     const text = input.trim();
     if (!text) return;
     onSend(text);
     setInput("");
+    if (inputRef.current) {
+      inputRef.current.style.height = "auto";
+    }
   }
 
   function selectCommand(cmd: CommandEntry) {
@@ -80,7 +102,8 @@ export function ChatInput({ onSend, onCancel, busy, disabled }: Props) {
       }
     }
 
-    if (e.key === "Enter" && !busy) {
+    if (e.key === "Enter" && !e.shiftKey && !busy) {
+      e.preventDefault();
       handleSend();
     }
   }
@@ -114,50 +137,77 @@ export function ChatInput({ onSend, onCancel, busy, disabled }: Props) {
         </div>
       )}
 
-      <div className={cn("flex gap-3 border-t border-gray-700 p-4")}>
-        <input
-          ref={inputRef}
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          disabled={disabled}
-          placeholder="Type a message..."
-          autoComplete="off"
+      <div className="border-t border-gray-700 p-4">
+        <div
           className={cn(
-            "flex-1 rounded-md px-4 py-2.5",
-            "border bg-gray-800 text-sm text-gray-200 outline-none",
+            "flex flex-col gap-1 rounded-md border bg-gray-800",
             isCommandMode && !busy
               ? "border-blue-500"
-              : "border-gray-600 focus:border-blue-400",
-            "disabled:opacity-50",
+              : "border-gray-600 focus-within:border-blue-400",
           )}
-        />
-        {busy ? (
-          <button
-            onClick={onCancel}
+        >
+          <textarea
+            ref={inputRef}
+            value={input}
+            onChange={(e) => {
+              setInput(e.target.value);
+              resizeTextarea();
+            }}
+            onKeyDown={handleKeyDown}
+            disabled={disabled}
+            placeholder="Type a message..."
+            autoComplete="off"
+            rows={1}
             className={cn(
-              "rounded-md px-5 py-2.5",
-              "bg-gray-700 text-sm font-semibold text-gray-300",
-              "hover:bg-red-600 hover:text-white",
+              "w-full resize-none overflow-y-auto bg-transparent px-4 pt-2.5",
+              "text-base text-gray-200 outline-none",
+              "disabled:opacity-50",
             )}
-          >
-            Cancel
-          </button>
-        ) : (
-          <button
-            onClick={handleSend}
-            disabled={disabled || !input.trim()}
-            className={cn(
-              "rounded-md px-5 py-2.5",
-              "bg-blue-500 text-sm font-semibold text-white",
-              "hover:bg-blue-600",
-              "disabled:cursor-not-allowed disabled:opacity-50",
+          />
+          <div className="flex items-center justify-between px-2 pb-2">
+            <button
+              onClick={onToggleScroll}
+              className={cn(
+                "rounded p-1 transition-colors",
+                followScroll
+                  ? "text-blue-400 hover:text-blue-300"
+                  : "text-gray-600 hover:text-gray-400",
+              )}
+              title={followScroll ? "Scroll locked" : "Scroll unlocked"}
+            >
+              {followScroll ? (
+                <LockIcon className="h-4 w-4" />
+              ) : (
+                <UnlockIcon className="h-4 w-4" />
+              )}
+            </button>
+            {busy ? (
+              <button
+                onClick={onCancel}
+                className={cn(
+                  "rounded-md px-4 py-1.5",
+                  "bg-gray-700 text-sm font-semibold text-gray-300",
+                  "hover:bg-red-600 hover:text-white",
+                )}
+              >
+                Cancel
+              </button>
+            ) : (
+              <button
+                onClick={handleSend}
+                disabled={disabled || !input.trim()}
+                className={cn(
+                  "rounded-md px-4 py-1.5",
+                  "bg-blue-500 text-sm font-semibold text-white",
+                  "hover:bg-blue-600",
+                  "disabled:cursor-not-allowed disabled:opacity-50",
+                )}
+              >
+                Send
+              </button>
             )}
-          >
-            Send
-          </button>
-        )}
+          </div>
+        </div>
       </div>
     </div>
   );
