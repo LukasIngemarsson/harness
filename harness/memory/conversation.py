@@ -7,7 +7,7 @@ from harness.enums import Role
 
 logger = logging.getLogger(__name__)
 
-CHARS_PER_TOKEN = 4
+_CHARS_PER_TOKEN = 4
 RECENT_MESSAGES_TO_KEEP = 10
 
 
@@ -15,7 +15,7 @@ def estimate_tokens(messages: list[dict]) -> int:
     total_chars = sum(
         len(json.dumps(msg)) for msg in messages
     )
-    return total_chars // CHARS_PER_TOKEN
+    return total_chars // _CHARS_PER_TOKEN
 
 
 class Conversation:

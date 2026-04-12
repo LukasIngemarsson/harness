@@ -26,19 +26,19 @@ from harness.tools.task_update import UpdateTaskTool
 
 logger = logging.getLogger(__name__)
 
-TOOL_DEFINITIONS = [tool.to_api_format() for tool in TOOLS]
+_TOOL_DEFINITIONS = [tool.to_api_format() for tool in TOOLS]
 TOOL_MAP = {tool.name: tool for tool in TOOLS}
-TASK_TOOL_NAMES = {
+_TASK_TOOL_NAMES = {
     PlanTaskTool.name,
     UpdateTaskTool.name,
     ListTasksTool.name,
 }
 
-MAX_ITERATIONS = 25
-MAX_TOOL_RETRIES = 2
-MAX_LLM_RETRIES = 3
-RETRY_DELAY = 1.0
-LLM_TIMEOUT = 120.0
+_MAX_ITERATIONS = 25
+_MAX_TOOL_RETRIES = 2
+_MAX_LLM_RETRIES = 3
+_RETRY_DELAY = 1.0
+_LLM_TIMEOUT = 120.0
 
 _DANGEROUS_SHELL_PATTERNS = [
     (re.compile(r"\brm\b"), "destructive command: rm"),
@@ -67,7 +67,7 @@ class Agent:
         self.client = OpenAI(
             base_url=config["base_url"],
             api_key=config["api_key"],
-            timeout=LLM_TIMEOUT,
+            timeout=_LLM_TIMEOUT,
         )
         self.model = config["model"]
         self.config = config
@@ -83,16 +83,16 @@ class Agent:
         logger.info("User message: %s", message)
         self.conversation.add_user_message(message)
 
-        for _ in range(MAX_ITERATIONS):
+        for _ in range(_MAX_ITERATIONS):
             yield from self._maybe_compact()
 
             response = None
-            for attempt in range(1, MAX_LLM_RETRIES + 1):
+            for attempt in range(1, _MAX_LLM_RETRIES + 1):
                 try:
                     response = self.client.chat.completions.create(
                         model=self.model,
                         messages=self.conversation.messages,
-                        tools=TOOL_DEFINITIONS,
+                        tools=_TOOL_DEFINITIONS,
                         tool_choice="auto",
                         stream=True,
                         stream_options={"include_usage": True},
@@ -102,17 +102,17 @@ class Agent:
                     logger.warning(
                         "LLM request attempt %d/%d failed: %s",
                         attempt,
-                        MAX_LLM_RETRIES,
+                        _MAX_LLM_RETRIES,
                         e,
                     )
-                    if attempt >= MAX_LLM_RETRIES:
+                    if attempt >= _MAX_LLM_RETRIES:
                         logger.error(
                             "LLM request failed after %d attempts",
-                            MAX_LLM_RETRIES,
+                            _MAX_LLM_RETRIES,
                         )
                         yield {"type": EventType.ERROR, "content": str(e)}
                     else:
-                        time.sleep(RETRY_DELAY * attempt)
+                        time.sleep(_RETRY_DELAY * attempt)
 
             if response is None:
                 break
@@ -178,7 +178,7 @@ class Agent:
         )
         self.conversation.add_user_message(reflection_prompt)
 
-        for attempt in range(1, MAX_LLM_RETRIES + 1):
+        for attempt in range(1, _MAX_LLM_RETRIES + 1):
             try:
                 response = self.client.chat.completions.create(
                     model=self.model,
@@ -191,16 +191,16 @@ class Agent:
                 logger.warning(
                     "Reflection LLM attempt %d/%d failed: %s",
                     attempt,
-                    MAX_LLM_RETRIES,
+                    _MAX_LLM_RETRIES,
                     e,
                 )
-                if attempt >= MAX_LLM_RETRIES:
+                if attempt >= _MAX_LLM_RETRIES:
                     yield {
                         "type": EventType.ERROR,
                         "content": f"Reflection failed: {e}",
                     }
                     return
-                time.sleep(RETRY_DELAY * attempt)
+                time.sleep(_RETRY_DELAY * attempt)
 
         content = ""
         usage = None
@@ -521,7 +521,7 @@ class Agent:
                 tc["id"], str(result)
             )
 
-            if name in TASK_TOOL_NAMES:
+            if name in _TASK_TOOL_NAMES:
                 yield {
                     "type": EventType.TASK_UPDATE,
                     "tasks": serialize_tasks(
@@ -739,14 +739,14 @@ class Agent:
 
         # Execute with retry on retryable errors
         last_error = ""
-        for attempt in range(1, MAX_TOOL_RETRIES + 1):
+        for attempt in range(1, _MAX_TOOL_RETRIES + 1):
             try:
                 result = tool.execute(**args)
             except TypeError as e:
                 return f"Error: {e}"
             except ToolError as e:
                 last_error = f"Error: {e}"
-                if not e.retryable or attempt >= MAX_TOOL_RETRIES:
+                if not e.retryable or attempt >= _MAX_TOOL_RETRIES:
                     return last_error
                 logger.warning(
                     "Tool %s attempt %d failed (retryable): %s",
@@ -754,7 +754,7 @@ class Agent:
                     attempt,
                     e,
                 )
-                time.sleep(RETRY_DELAY)
+                time.sleep(_RETRY_DELAY)
                 continue
 
             # Cache successful results for idempotent tools

@@ -8,7 +8,7 @@ from harness.tools.base import Tool, ToolError
 
 logger = logging.getLogger(__name__)
 
-MAX_RESULTS = 5
+_MAX_RESULTS = 5
 
 
 class WebSearchTool(Tool):
@@ -35,7 +35,7 @@ class WebSearchTool(Tool):
         logger.info("Searching: %s", query)
         try:
             results = DDGS().text(
-                query, max_results=MAX_RESULTS
+                query, max_results=_MAX_RESULTS
             )
         except Exception as e:
             raise ToolError(

@@ -7,12 +7,12 @@ from harness.tools.base import Tool, ToolError
 
 logger = logging.getLogger(__name__)
 
-USER_AGENT = (
+_USER_AGENT = (
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
     " AppleWebKit/537.36 (KHTML, like Gecko)"
     " Chrome/120.0.0.0 Safari/537.36"
 )
-MAX_CHARS = 10000
+_MAX_CHARS = 10000
 
 
 class _TextExtractor(HTMLParser):
@@ -63,7 +63,7 @@ class UrlReadTool(Tool):
     def execute(self, url: str, **kwargs: object) -> str:
         logger.info("Fetching URL: %s", url)
         try:
-            req = Request(url, headers={"User-Agent": USER_AGENT})
+            req = Request(url, headers={"User-Agent": _USER_AGENT})
             with urlopen(req, timeout=15) as resp:
                 html = resp.read().decode("utf-8", errors="replace")
         except Exception as e:
@@ -75,7 +75,7 @@ class UrlReadTool(Tool):
         extractor.feed(html)
         text = extractor.get_text()
 
-        if len(text) > MAX_CHARS:
-            text = text[:MAX_CHARS] + "\n\n[truncated]"
+        if len(text) > _MAX_CHARS:
+            text = text[:_MAX_CHARS] + "\n\n[truncated]"
 
         return text if text else "(no readable text found)"

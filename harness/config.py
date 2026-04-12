@@ -15,13 +15,13 @@ LOG_DIR = Path.cwd() / ".logs"
 
 WORKSPACE_DIR.mkdir(exist_ok=True)
 
-REQUIRED_VARS = ["MODEL", "BASE_URL", "API_KEY"]
+_REQUIRED_VARS = ["MODEL", "BASE_URL", "API_KEY"]
 
 
 def load_config() -> dict:
     load_dotenv()
 
-    missing = [v for v in REQUIRED_VARS if not os.getenv(v)]
+    missing = [v for v in _REQUIRED_VARS if not os.getenv(v)]
     if missing:
         logger.critical(
             "Missing required environment variables: %s", ", ".join(missing)

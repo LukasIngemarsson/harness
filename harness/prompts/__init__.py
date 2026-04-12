@@ -4,7 +4,7 @@ from importlib.resources import files
 from harness.config import MEMORY_PATH
 from harness.tools import TOOLS
 
-DEFAULT_PROFILE = "default"
+_DEFAULT_PROFILE = "default"
 
 
 def load_prompt(package: str, filename: str) -> str:
@@ -53,7 +53,7 @@ def switch_mode(user_input: str) -> dict:
     }
 
 
-def build_system_prompt(profile: str = DEFAULT_PROFILE) -> str:
+def build_system_prompt(profile: str = _DEFAULT_PROFILE) -> str:
     template = load_prompt("harness.prompts", "system.md")
     tool_list = "\n".join(f"- {tool.name}: {tool.description}" for tool in TOOLS)
     profile_content = load_profile(profile)
