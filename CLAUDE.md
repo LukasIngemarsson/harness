@@ -1,17 +1,18 @@
 # Harness
 
-Agentic AI framework using the OpenAI-compatible client library. Works with local models (Ollama) and cloud APIs (OpenAI). Two interfaces: terminal REPL and web UI.
+Agentic AI framework using the OpenAI-compatible client library. Works with local models (Ollama) and cloud APIs (OpenAI). Three interfaces: TUI, web UI, and plain REPL.
 
 ## Project Structure
 
-- `main.py` — Terminal REPL entry point
+- `tui.py` — Rich-based terminal UI entry point
 - `server.py` — FastAPI + WebSocket entry point for web UI
-- `agent.py` — Core agent loop, yields events via generator pattern
-- `config.py` — `load_config()` for env vars, all path constants
-- `memory/` — `Conversation` class with JSON persistence, `TaskStore` for task tracking
-- `prompts/` — System prompt templating with memory injection
-- `tools/` — Auto-discovered tools sandboxed to `.workspace/`
-- `utils/` — Enums (`Role`, `Status`), I/O formatting, logging setup
+- `harness/agent.py` — Core agent loop, yields events via generator pattern
+- `harness/config.py` — `load_config()` for env vars, all path constants
+- `harness/enums.py` — Shared enums (`Role`, `Status`, `EventType`, `Command`)
+- `harness/memory/` — `Conversation` class with JSON persistence, `TaskStore` for task tracking
+- `harness/prompts/` — System prompt templating with memory injection
+- `harness/tools/` — Auto-discovered tools sandboxed to `.workspace/`
+- `harness/utils/` — I/O formatting, logging setup
 - `tests/` — pytest suite for tools, config, and tasks
 - `frontend/` — Vite + React + TypeScript + Tailwind web UI
 
@@ -34,9 +35,9 @@ Auto-discovered from `tools/`. Drop a `Tool` subclass in and it registers.
 
 ## Running
 
-### Terminal REPL
+### Terminal UI
 ```bash
-python main.py
+python tui.py
 ```
 
 ### Web UI (development)
