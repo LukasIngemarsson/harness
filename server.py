@@ -28,6 +28,11 @@ if static_dir.is_dir():
     app.mount("/assets", StaticFiles(directory=static_dir), name="assets")
 
 
+@app.get("/favicon.svg")
+async def favicon() -> FileResponse:
+    return FileResponse("static/favicon.svg")
+
+
 @app.get("/")
 async def root() -> FileResponse:
     return FileResponse("static/index.html")

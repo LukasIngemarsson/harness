@@ -51,7 +51,6 @@ export function MessageBubble({ message, onConfirm }: Props) {
           <TaskProgress
             goal={message.goal}
             steps={message.steps}
-            status={message.status}
           />
         </MessageWrapper>
       );
