@@ -4,8 +4,8 @@ import subprocess
 from harness.config import WORKSPACE_DIR
 from harness.tools.base import Tool, ToolError
 
-TIMEOUT_SECONDS = 30
-ALLOWED_SUBCOMMANDS = {
+_TIMEOUT_SECONDS = 30
+_ALLOWED_SUBCOMMANDS = {
     "status",
     "log",
     "diff",
@@ -17,7 +17,7 @@ ALLOWED_SUBCOMMANDS = {
     "remote",
     "rev-parse",
 }
-MAX_OUTPUT_CHARS = 10000
+_MAX_OUTPUT_CHARS = 10000
 
 
 class GitTool(Tool):
@@ -54,10 +54,10 @@ class GitTool(Tool):
             raise ToolError("empty command")
 
         subcommand = parts[0]
-        if subcommand not in ALLOWED_SUBCOMMANDS:
+        if subcommand not in _ALLOWED_SUBCOMMANDS:
             raise ToolError(
                 f"'{subcommand}' is not allowed. "
-                f"Allowed: {', '.join(sorted(ALLOWED_SUBCOMMANDS))}"
+                f"Allowed: {', '.join(sorted(_ALLOWED_SUBCOMMANDS))}"
             )
 
         full_cmd = ["git"] + parts
@@ -66,13 +66,13 @@ class GitTool(Tool):
                 full_cmd,
                 capture_output=True,
                 text=True,
-                timeout=TIMEOUT_SECONDS,
+                timeout=_TIMEOUT_SECONDS,
                 cwd=WORKSPACE_DIR,
             )
             output = result.stdout + result.stderr
         except subprocess.TimeoutExpired:
             raise ToolError(
-                f"command timed out after {TIMEOUT_SECONDS}s",
+                f"command timed out after {_TIMEOUT_SECONDS}s",
                 retryable=True,
             )
         except FileNotFoundError:
@@ -80,7 +80,7 @@ class GitTool(Tool):
 
         output = output.strip() if output.strip() else "(no output)"
 
-        if len(output) > MAX_OUTPUT_CHARS:
-            output = output[:MAX_OUTPUT_CHARS] + "\n\n[truncated]"
+        if len(output) > _MAX_OUTPUT_CHARS:
+            output = output[:_MAX_OUTPUT_CHARS] + "\n\n[truncated]"
 
         return output

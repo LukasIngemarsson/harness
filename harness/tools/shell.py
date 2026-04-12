@@ -4,8 +4,8 @@ import subprocess
 from harness.config import WORKSPACE_DIR
 from harness.tools.base import Tool, ToolError
 
-TIMEOUT_SECONDS = 30
-ALLOWED_COMMANDS = {
+_TIMEOUT_SECONDS = 30
+_ALLOWED_COMMANDS = {
     "ls",
     "cat",
     "echo",
@@ -59,10 +59,10 @@ class ShellTool(Tool):
             raise ToolError(f"invalid command syntax: {e}")
 
         base_command = parts[0] if parts else ""
-        if base_command not in ALLOWED_COMMANDS:
+        if base_command not in _ALLOWED_COMMANDS:
             raise ToolError(
                 f"'{base_command}' is not allowed. "
-                f"Allowed commands: {', '.join(sorted(ALLOWED_COMMANDS))}"
+                f"Allowed commands: {', '.join(sorted(_ALLOWED_COMMANDS))}"
             )
 
         try:
@@ -70,13 +70,13 @@ class ShellTool(Tool):
                 parts,
                 capture_output=True,
                 text=True,
-                timeout=TIMEOUT_SECONDS,
+                timeout=_TIMEOUT_SECONDS,
                 cwd=WORKSPACE_DIR,
             )
             output = result.stdout + result.stderr
             return output.strip() if output.strip() else "(no output)"
         except subprocess.TimeoutExpired:
             raise ToolError(
-                f"command timed out after {TIMEOUT_SECONDS}s",
+                f"command timed out after {_TIMEOUT_SECONDS}s",
                 retryable=True,
             )

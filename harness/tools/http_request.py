@@ -6,9 +6,9 @@ from harness.tools.base import Tool, ToolError
 
 logger = logging.getLogger(__name__)
 
-TIMEOUT_SECONDS = 30
-MAX_RESPONSE_CHARS = 10000
-ALLOWED_METHODS = {"GET", "POST", "PUT", "PATCH", "DELETE"}
+_TIMEOUT_SECONDS = 30
+_MAX_RESPONSE_CHARS = 10000
+_ALLOWED_METHODS = {"GET", "POST", "PUT", "PATCH", "DELETE"}
 
 
 class HttpRequestTool(Tool):
@@ -52,7 +52,7 @@ class HttpRequestTool(Tool):
         **kwargs: object,
     ) -> str:
         method = method.upper()
-        if method not in ALLOWED_METHODS:
+        if method not in _ALLOWED_METHODS:
             raise ToolError(f"unsupported method: {method}")
 
         logger.info("HTTP %s %s", method, url)
@@ -79,13 +79,13 @@ class HttpRequestTool(Tool):
         )
 
         try:
-            with urlopen(req, timeout=TIMEOUT_SECONDS) as resp:
+            with urlopen(req, timeout=_TIMEOUT_SECONDS) as resp:
                 status = resp.status
                 resp_body = resp.read().decode("utf-8", errors="replace")
         except Exception as e:
             raise ToolError(str(e), retryable=True)
 
-        if len(resp_body) > MAX_RESPONSE_CHARS:
-            resp_body = resp_body[:MAX_RESPONSE_CHARS] + "\n\n[truncated]"
+        if len(resp_body) > _MAX_RESPONSE_CHARS:
+            resp_body = resp_body[:_MAX_RESPONSE_CHARS] + "\n\n[truncated]"
 
         return f"HTTP {status}\n\n{resp_body}"
