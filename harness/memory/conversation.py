@@ -38,6 +38,13 @@ class Conversation:
             {"role": Role.TOOL, "tool_call_id": tool_call_id, "content": content}
         )
 
+    def drop_last_incomplete(self) -> None:
+        while self._messages and self._messages[-1].get("role") in (
+            Role.ASSISTANT,
+            Role.TOOL,
+        ):
+            self._messages.pop()
+
     def needs_compaction(self, max_tokens: int) -> bool:
         token_count = estimate_tokens(self._messages)
         threshold = int(max_tokens * 0.75)
@@ -142,4 +149,32 @@ class Conversation:
             return cls(system_prompt)
         conv = cls(system_prompt)
         conv._messages = json.loads(path.read_text())
+        conv._repair_incomplete()
         return conv
+
+    def _repair_incomplete(self) -> None:
+        tool_result_ids = {
+            m.get("tool_call_id")
+            for m in self._messages
+            if m.get("role") == Role.TOOL
+        }
+        cleaned = []
+        skip_until_user = False
+        for msg in self._messages:
+            role = msg.get("role")
+            if skip_until_user:
+                if role == Role.USER:
+                    skip_until_user = False
+                    cleaned.append(msg)
+                continue
+            if role == Role.ASSISTANT and msg.get("tool_calls"):
+                if any(
+                    tc["id"] not in tool_result_ids
+                    for tc in msg["tool_calls"]
+                ):
+                    skip_until_user = True
+                    continue
+            cleaned.append(msg)
+        if len(cleaned) != len(self._messages):
+            self._messages = cleaned
+            self.save()

@@ -124,8 +124,36 @@ class Agent:
             content = ""
             tool_calls = {}
             usage = None
+            last_chunk_time = [time.monotonic()]
+            stream_done = Event()
+
+            def _watchdog() -> None:
+                while not stream_done.is_set():
+                    if stream_done.wait(timeout=10):
+                        return
+                    elapsed = (
+                        time.monotonic() - last_chunk_time[0]
+                    )
+                    if elapsed > 90:
+                        logger.error(
+                            "Stream watchdog: no data for"
+                            " %.0fs, closing",
+                            elapsed,
+                        )
+                        try:
+                            response.close()
+                        except Exception:
+                            pass
+                        return
+
+            watchdog = Thread(
+                target=_watchdog, daemon=True
+            )
+            watchdog.start()
+
             try:
                 for chunk in response:
+                    last_chunk_time[0] = time.monotonic()
                     if chunk.usage:
                         usage = {
                             "prompt_tokens": chunk.usage.prompt_tokens,
@@ -160,6 +188,9 @@ class Agent:
                     "content": f"Stream interrupted: {e}",
                 }
                 break
+            finally:
+                stream_done.set()
+                watchdog.join(timeout=1)
 
             if not tool_calls:
                 if content:
@@ -169,6 +200,7 @@ class Agent:
                             "content": content,
                         }
                     )
+                get_task_store().clear()
                 yield {"type": EventType.DONE, "usage": usage}
                 break
 
@@ -679,7 +711,19 @@ class Agent:
         done_count = 0
         total = len(threads)
         while done_count < total:
-            event = queue.get()
+            try:
+                event = queue.get(timeout=120)
+            except Exception:
+                logger.error(
+                    "Sub-agent queue timed out, %d/%d done",
+                    done_count,
+                    total,
+                )
+                yield {
+                    "type": EventType.ERROR,
+                    "content": "Sub-agent timed out",
+                }
+                break
             if event.get("_done"):
                 done_count += 1
                 tc = agent_ids[event["agent_id"]]

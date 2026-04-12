@@ -4,8 +4,6 @@ type Props = {
 
 export function SystemMessage({ content }: Props) {
   return (
-    <div className="whitespace-pre-wrap text-xs text-gray-500">
-      {content}
-    </div>
+    <div className="text-xs whitespace-pre-wrap text-gray-500">{content}</div>
   );
 }
