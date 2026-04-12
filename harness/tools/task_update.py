@@ -1,6 +1,6 @@
 from harness.enums import Status
 from harness.memory.task import get_task_store
-from harness.tools.base import Tool, ToolError
+from harness.tools.base import Tool, ToolError, ToolResult
 
 
 class UpdateTaskTool(Tool):
@@ -42,7 +42,7 @@ class UpdateTaskTool(Tool):
         status: str,
         result: str = "",
         **kwargs: object,
-    ) -> str:
+    ) -> ToolResult:
         task = get_task_store().update_step(
             task_id, int(step_index), status, result or None
         )
@@ -51,7 +51,7 @@ class UpdateTaskTool(Tool):
                 f"task '{task_id}' or step {step_index} not found"
             )
         step = task.steps[int(step_index)]
-        return (
-            f"Step {step_index} ({step.description}):"
+        return ToolResult(
+            text=f"Step {step_index} ({step.description}):"
             f" {step.status}. Task: {task.status}"
         )

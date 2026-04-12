@@ -2,7 +2,7 @@ import shlex
 import subprocess
 
 from harness.config import WORKSPACE_DIR
-from harness.tools.base import Tool, ToolError
+from harness.tools.base import Tool, ToolError, ToolResult
 
 _TIMEOUT_SECONDS = 30
 _ALLOWED_COMMANDS = {
@@ -52,7 +52,7 @@ class ShellTool(Tool):
         "required": ["command"],
     }
 
-    def execute(self, command: str, **kwargs: object) -> str:
+    def execute(self, command: str, **kwargs: object) -> ToolResult:
         try:
             parts = shlex.split(command)
         except ValueError as e:
@@ -74,7 +74,7 @@ class ShellTool(Tool):
                 cwd=WORKSPACE_DIR,
             )
             output = result.stdout + result.stderr
-            return output.strip() if output.strip() else "(no output)"
+            return ToolResult(text=output.strip() if output.strip() else "(no output)")
         except subprocess.TimeoutExpired:
             raise ToolError(
                 f"command timed out after {_TIMEOUT_SECONDS}s",

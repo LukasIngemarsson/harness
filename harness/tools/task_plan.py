@@ -1,5 +1,5 @@
 from harness.memory.task import get_task_store
-from harness.tools.base import Tool
+from harness.tools.base import Tool, ToolResult
 
 
 class PlanTaskTool(Tool):
@@ -26,13 +26,13 @@ class PlanTaskTool(Tool):
         "required": ["goal", "steps"],
     }
 
-    def execute(self, goal: str, steps: list[str], **kwargs: object) -> str:
+    def execute(self, goal: str, steps: list[str], **kwargs: object) -> ToolResult:
         task = get_task_store().create(goal, steps)
         step_list = "\n".join(
             f"  {i}. {s}" for i, s in enumerate(steps)
         )
-        return (
-            f"Task created. task_id={task.id}\n"
+        return ToolResult(
+            text=f"Task created. task_id={task.id}\n"
             f"Steps (use step_index when calling update_task):\n"
             f"{step_list}"
         )

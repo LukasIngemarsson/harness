@@ -2,7 +2,7 @@ import json
 import logging
 from urllib.request import Request, urlopen
 
-from harness.tools.base import Tool, ToolError
+from harness.tools.base import Tool, ToolError, ToolResult
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +50,7 @@ class HttpRequestTool(Tool):
         headers: dict | None = None,
         body: str | None = None,
         **kwargs: object,
-    ) -> str:
+    ) -> ToolResult:
         method = method.upper()
         if method not in _ALLOWED_METHODS:
             raise ToolError(f"unsupported method: {method}")
@@ -88,4 +88,4 @@ class HttpRequestTool(Tool):
         if len(resp_body) > _MAX_RESPONSE_CHARS:
             resp_body = resp_body[:_MAX_RESPONSE_CHARS] + "\n\n[truncated]"
 
-        return f"HTTP {status}\n\n{resp_body}"
+        return ToolResult(text=f"HTTP {status}\n\n{resp_body}")

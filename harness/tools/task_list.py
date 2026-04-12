@@ -1,6 +1,6 @@
 from harness.enums import Status
 from harness.memory.task import get_task_store
-from harness.tools.base import Tool
+from harness.tools.base import Tool, ToolResult
 
 
 class ListTasksTool(Tool):
@@ -16,10 +16,10 @@ class ListTasksTool(Tool):
         "required": [],
     }
 
-    def execute(self, **kwargs: object) -> str:
+    def execute(self, **kwargs: object) -> ToolResult:
         tasks = get_task_store().list_all()
         if not tasks:
-            return "No tasks."
+            return ToolResult(text="No tasks.")
 
         lines = []
         for task in tasks:
@@ -31,4 +31,4 @@ class ListTasksTool(Tool):
                 lines.append(f"  [{marker}] {i}. {step.description}")
                 if step.result:
                     lines.append(f"      -> {step.result}")
-        return "\n".join(lines)
+        return ToolResult(text="\n".join(lines))

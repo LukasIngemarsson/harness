@@ -3,7 +3,7 @@ import re
 from html.parser import HTMLParser
 from urllib.request import Request, urlopen
 
-from harness.tools.base import Tool, ToolError
+from harness.tools.base import Tool, ToolError, ToolResult
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +60,7 @@ class UrlReadTool(Tool):
         "required": ["url"],
     }
 
-    def execute(self, url: str, **kwargs: object) -> str:
+    def execute(self, url: str, **kwargs: object) -> ToolResult:
         logger.info("Fetching URL: %s", url)
         try:
             req = Request(url, headers={"User-Agent": _USER_AGENT})
@@ -78,4 +78,4 @@ class UrlReadTool(Tool):
         if len(text) > _MAX_CHARS:
             text = text[:_MAX_CHARS] + "\n\n[truncated]"
 
-        return text if text else "(no readable text found)"
+        return ToolResult(text=text if text else "(no readable text found)")

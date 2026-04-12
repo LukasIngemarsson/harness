@@ -4,6 +4,7 @@ from pathlib import Path
 
 from harness.config import HISTORY_PATH
 from harness.enums import Role
+from harness.tools.base import ToolResult
 
 logger = logging.getLogger(__name__)
 
@@ -33,9 +34,31 @@ class Conversation:
     def add_assistant_message(self, message: str) -> None:
         self._messages.append(message)
 
-    def add_tool_result(self, tool_call_id: str, content: str) -> None:
+    def add_tool_result(
+        self, tool_call_id: str, result: ToolResult
+    ) -> None:
+        if result.image_base64:
+            content: str | list = [
+                {"type": "text", "text": result.text},
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": (
+                            f"data:{result.media_type}"
+                            f";base64,{result.image_base64}"
+                        ),
+                    },
+                },
+            ]
+        else:
+            content = result.text
+
         self._messages.append(
-            {"role": Role.TOOL, "tool_call_id": tool_call_id, "content": content}
+            {
+                "role": Role.TOOL,
+                "tool_call_id": tool_call_id,
+                "content": content,
+            }
         )
 
     def drop_last_incomplete(self) -> None:

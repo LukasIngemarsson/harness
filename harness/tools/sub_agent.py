@@ -1,4 +1,4 @@
-from harness.tools.base import Tool
+from harness.tools.base import Tool, ToolResult
 
 
 class SubAgentTool(Tool):
@@ -39,8 +39,8 @@ class SubAgentTool(Tool):
 
     def execute(
         self, role: str, task: str, **kwargs: object
-    ) -> str:
+    ) -> ToolResult:
         # Execution is handled by Agent._execute_single_tool()
         # which calls Agent.spawn() directly. This tool class
         # only exists for the API definition.
-        return "Error: spawn_agent must be called via Agent"
+        return ToolResult(text="Error: spawn_agent must be called via Agent")

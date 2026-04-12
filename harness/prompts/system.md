@@ -31,6 +31,7 @@ Today's date is {date}.
 | Read a webpage | `read_url` |
 | Call an API | `http_request` |
 | Inspect git history | `git` |
+| View an image or chart | `read_image` |
 | Get current time | `get_current_time` |
 | Plan and track work | `plan_task`, `update_task`, `list_tasks` |
 | Persistent memory | `save_memory`, `read_memory` |
