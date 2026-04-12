@@ -7,7 +7,7 @@ from collections.abc import Iterator
 from queue import Queue
 from threading import Event, Thread
 
-from openai import OpenAI
+from openai import OpenAI, Timeout
 
 from harness.enums import EventType, Role
 from harness.memory.conversation import (
@@ -38,7 +38,6 @@ _MAX_ITERATIONS = 25
 _MAX_TOOL_RETRIES = 2
 _MAX_LLM_RETRIES = 3
 _RETRY_DELAY = 1.0
-_LLM_TIMEOUT = 120.0
 
 _DANGEROUS_SHELL_PATTERNS = [
     (re.compile(r"\brm\b"), "destructive command: rm"),
@@ -67,7 +66,12 @@ class Agent:
         self.client = OpenAI(
             base_url=config["base_url"],
             api_key=config["api_key"],
-            timeout=_LLM_TIMEOUT,
+            timeout=Timeout(
+                connect=30.0,
+                read=90.0,
+                write=30.0,
+                pool=30.0,
+            ),
         )
         self.model = config["model"]
         self.config = config
@@ -120,34 +124,42 @@ class Agent:
             content = ""
             tool_calls = {}
             usage = None
-            for chunk in response:
-                if chunk.usage:
-                    usage = {
-                        "prompt_tokens": chunk.usage.prompt_tokens,
-                        "completion_tokens": chunk.usage.completion_tokens,
-                        "total_tokens": chunk.usage.total_tokens,
-                    }
-                if not chunk.choices:
-                    continue
-                delta = chunk.choices[0].delta
-                if delta.content:
-                    content += delta.content
-                    yield {
-                        "type": EventType.TOKEN,
-                        "content": delta.content,
-                    }
-                if delta.tool_calls:
-                    for tc in delta.tool_calls:
-                        if tc.index not in tool_calls:
-                            tool_calls[tc.index] = {
-                                "id": tc.id,
-                                "name": tc.function.name,
-                                "arguments": "",
-                            }
-                        if tc.function.arguments:
-                            tool_calls[tc.index][
-                                "arguments"
-                            ] += tc.function.arguments
+            try:
+                for chunk in response:
+                    if chunk.usage:
+                        usage = {
+                            "prompt_tokens": chunk.usage.prompt_tokens,
+                            "completion_tokens": chunk.usage.completion_tokens,
+                            "total_tokens": chunk.usage.total_tokens,
+                        }
+                    if not chunk.choices:
+                        continue
+                    delta = chunk.choices[0].delta
+                    if delta.content:
+                        content += delta.content
+                        yield {
+                            "type": EventType.TOKEN,
+                            "content": delta.content,
+                        }
+                    if delta.tool_calls:
+                        for tc in delta.tool_calls:
+                            if tc.index not in tool_calls:
+                                tool_calls[tc.index] = {
+                                    "id": tc.id,
+                                    "name": tc.function.name,
+                                    "arguments": "",
+                                }
+                            if tc.function.arguments:
+                                tool_calls[tc.index][
+                                    "arguments"
+                                ] += tc.function.arguments
+            except Exception as e:
+                logger.error("Stream interrupted: %s", e)
+                yield {
+                    "type": EventType.ERROR,
+                    "content": f"Stream interrupted: {e}",
+                }
+                break
 
             if not tool_calls:
                 if content:

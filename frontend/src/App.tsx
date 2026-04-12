@@ -11,7 +11,7 @@ import { useSocket } from "./hooks/useSocket";
 import { MessageBubble } from "./components/MessageBubble";
 import { ChatInput } from "./components/ChatInput";
 import { ThinkingIndicator } from "./components/ThinkingIndicator";
-import { LockIcon, TokenStackIcon, UnlockIcon } from "./components/Icons";
+import { TokenStackIcon } from "./components/Icons";
 import { cn } from "./utils/cn";
 
 export default function App() {
@@ -356,22 +356,11 @@ export default function App() {
         )}
       >
         <span className="flex items-center gap-2">
-          Harness
-          <span className="text-gray-600">/ {profile}</span>
-          <button
-            onClick={() => setFollowScroll((f) => !f)}
-            className={cn(
-              "transition-colors",
-              followScroll
-                ? "text-blue-400 hover:text-blue-300"
-                : "text-gray-600 hover:text-gray-400",
-            )}
-            title={followScroll ? "Scroll locked" : "Scroll unlocked"}
-          >
-            {followScroll ? <LockIcon /> : <UnlockIcon />}
-          </button>
+          <img src="/favicon.svg" alt="" className="h-5 w-5" />
+          <span className="text-gray-300">Harness</span>
         </span>
         <div className="flex items-center gap-3">
+          <span className="text-gray-600">{profile}</span>
           <span className="flex items-center gap-1 text-gray-500">
             <TokenStackIcon />
             {tokenCount !== null ? `${(tokenCount / 1000).toFixed(1)}k` : "–"}
@@ -403,6 +392,8 @@ export default function App() {
         onCancel={handleCancel}
         busy={busy}
         disabled={!connected}
+        followScroll={followScroll}
+        onToggleScroll={() => setFollowScroll((f) => !f)}
       />
     </div>
   );
