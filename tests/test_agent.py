@@ -15,12 +15,8 @@ class TestToolCache:
         mock_tool.execute.return_value = ToolResult(text="search results")
 
         with patch.dict(TOOL_MAP, {"web_search": mock_tool}):
-            result1 = self.agent._execute_single_tool(
-                "web_search", {"query": "test"}
-            )
-            result2 = self.agent._execute_single_tool(
-                "web_search", {"query": "test"}
-            )
+            result1 = self.agent._execute_single_tool("web_search", {"query": "test"})
+            result2 = self.agent._execute_single_tool("web_search", {"query": "test"})
 
         assert result1.text == "search results"
         assert result2.text == "search results"
@@ -32,12 +28,8 @@ class TestToolCache:
         mock_tool.execute.return_value = ToolResult(text="result")
 
         with patch.dict(TOOL_MAP, {"run_shell": mock_tool}):
-            self.agent._execute_single_tool(
-                "run_shell", {"command": "ls"}
-            )
-            self.agent._execute_single_tool(
-                "run_shell", {"command": "ls"}
-            )
+            self.agent._execute_single_tool("run_shell", {"command": "ls"})
+            self.agent._execute_single_tool("run_shell", {"command": "ls"})
 
         assert mock_tool.execute.call_count == 2
 
@@ -50,12 +42,8 @@ class TestToolCache:
         ]
 
         with patch.dict(TOOL_MAP, {"web_search": mock_tool}):
-            r1 = self.agent._execute_single_tool(
-                "web_search", {"query": "foo"}
-            )
-            r2 = self.agent._execute_single_tool(
-                "web_search", {"query": "bar"}
-            )
+            r1 = self.agent._execute_single_tool("web_search", {"query": "foo"})
+            r2 = self.agent._execute_single_tool("web_search", {"query": "bar"})
 
         assert r1.text == "result A"
         assert r2.text == "result B"
@@ -71,12 +59,8 @@ class TestToolCache:
         ]
 
         with patch.dict(TOOL_MAP, {"web_search": mock_tool}):
-            r1 = self.agent._execute_single_tool(
-                "web_search", {"query": "test"}
-            )
-            r2 = self.agent._execute_single_tool(
-                "web_search", {"query": "test"}
-            )
+            r1 = self.agent._execute_single_tool("web_search", {"query": "test"})
+            r2 = self.agent._execute_single_tool("web_search", {"query": "test"})
 
         assert r1.text == "Error: timeout"
         assert r2.text == "actual result"
@@ -122,9 +106,7 @@ class TestToolRetry:
     def test_returns_error_after_max_retries(self, mock_sleep):
         mock_tool = MagicMock()
         mock_tool.cacheable = False
-        mock_tool.execute.side_effect = ToolError(
-            "server down", retryable=True
-        )
+        mock_tool.execute.side_effect = ToolError("server down", retryable=True)
 
         with patch.dict(TOOL_MAP, {"read_url": mock_tool}):
             result = self.agent._execute_single_tool(

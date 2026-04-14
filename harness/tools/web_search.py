@@ -59,9 +59,7 @@ class WebSearchTool(Tool):
                     raw = gzip.decompress(raw)
                 data = json.loads(raw.decode("utf-8"))
         except Exception as e:
-            raise ToolError(
-                f"search failed: {e}", retryable=True
-            )
+            raise ToolError(f"search failed: {e}", retryable=True)
 
         results = data.get("web", {}).get("results", [])
         if not results:

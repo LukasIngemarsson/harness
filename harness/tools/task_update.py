@@ -48,8 +48,7 @@ class UpdateTaskTool(Tool):
         )
         if not task:
             return ToolResult(
-                text=f"Task '{task_id}' no longer exists."
-                " Continue without updating."
+                text=f"Task '{task_id}' no longer exists. Continue without updating."
             )
         step = task.steps[int(step_index)]
         return ToolResult(

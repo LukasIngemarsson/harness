@@ -37,9 +37,7 @@ class SubAgentTool(Tool):
         "required": ["role", "task"],
     }
 
-    def execute(
-        self, role: str, task: str, **kwargs: object
-    ) -> ToolResult:
+    def execute(self, role: str, task: str, **kwargs: object) -> ToolResult:
         # Execution is handled by Agent._execute_single_tool()
         # which calls Agent.spawn() directly. This tool class
         # only exists for the API definition.

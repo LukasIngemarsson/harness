@@ -17,9 +17,7 @@ class TestCompaction:
     def test_short_conversation_does_not_need_compaction(self):
         conv = Conversation("system prompt")
         conv.add_user_message("hello")
-        conv.add_assistant_message(
-            {"role": "assistant", "content": "hi"}
-        )
+        conv.add_assistant_message({"role": "assistant", "content": "hi"})
         assert not conv.needs_compaction(128_000)
 
     def test_long_conversation_needs_compaction(self):

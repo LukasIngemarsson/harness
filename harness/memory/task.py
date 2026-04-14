@@ -21,9 +21,7 @@ class Task:
     steps: list[Step] = field(default_factory=list)
     status: str = Status.PENDING
     id: str = field(default_factory=lambda: uuid.uuid4().hex[:8])
-    created_at: str = field(
-        default_factory=lambda: datetime.now().isoformat()
-    )
+    created_at: str = field(default_factory=lambda: datetime.now().isoformat())
 
 
 class TaskStore:
@@ -37,9 +35,7 @@ class TaskStore:
             return
         data = json.loads(self._path.read_text())
         for task_data in data:
-            task_data["steps"] = [
-                Step(**s) for s in task_data.get("steps", [])
-            ]
+            task_data["steps"] = [Step(**s) for s in task_data.get("steps", [])]
             task = Task(**task_data)
             self._tasks[task.id] = task
 
@@ -99,8 +95,7 @@ def serialize_tasks(tasks: list[Task]) -> list[dict]:
             "goal": t.goal,
             "status": t.status,
             "steps": [
-                {"description": s.description, "status": s.status}
-                for s in t.steps
+                {"description": s.description, "status": s.status} for s in t.steps
             ],
         }
         for t in tasks

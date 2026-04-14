@@ -38,12 +38,8 @@ class ReadImageTool(Tool):
 
     def execute(self, path: str, **kwargs: object) -> ToolResult:
         target = (WORKSPACE_DIR / path).resolve()
-        if not str(target).startswith(
-            str(WORKSPACE_DIR.resolve())
-        ):
-            raise ToolError(
-                "access denied — path is outside workspace"
-            )
+        if not str(target).startswith(str(WORKSPACE_DIR.resolve())):
+            raise ToolError("access denied — path is outside workspace")
         if not target.exists():
             raise ToolError(f"file not found: {path}")
         if not target.is_file():

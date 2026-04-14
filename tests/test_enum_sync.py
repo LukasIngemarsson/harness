@@ -47,6 +47,7 @@ def test_status_sync():
         f"  TypeScript only: {ts_values - py_values}"
     )
 
+
 def test_command_sync():
     ts = TYPES_TS.read_text()
     ts_values = parse_ts_enum(ts, "Command")

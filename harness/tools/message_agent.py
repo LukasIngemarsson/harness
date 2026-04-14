@@ -16,8 +16,7 @@ class MessageAgentTool(Tool):
             "agent_id": {
                 "type": "string",
                 "description": (
-                    "The ID of the sub-agent to message"
-                    " (returned by spawn_agent)"
+                    "The ID of the sub-agent to message (returned by spawn_agent)"
                 ),
             },
             "message": {
@@ -31,7 +30,5 @@ class MessageAgentTool(Tool):
         "required": ["agent_id", "message"],
     }
 
-    def execute(
-        self, agent_id: str, message: str, **kwargs: object
-    ) -> ToolResult:
+    def execute(self, agent_id: str, message: str, **kwargs: object) -> ToolResult:
         return ToolResult(text="Error: message_agent must be called via Agent")

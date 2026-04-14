@@ -25,9 +25,7 @@ class ListTasksTool(Tool):
         for task in tasks:
             lines.append(f"[{task.status}] {task.goal} ({task.id})")
             for i, step in enumerate(task.steps):
-                marker = (
-                    "x" if step.status == Status.COMPLETED else " "
-                )
+                marker = "x" if step.status == Status.COMPLETED else " "
                 lines.append(f"  [{marker}] {i}. {step.description}")
                 if step.result:
                     lines.append(f"      -> {step.result}")

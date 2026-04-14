@@ -163,9 +163,7 @@ async def websocket_endpoint(ws: WebSocket) -> None:
 
             while True:
                 try:
-                    event = await asyncio.wait_for(
-                        event_queue.get(), timeout=90
-                    )
+                    event = await asyncio.wait_for(event_queue.get(), timeout=90)
                 except asyncio.TimeoutError:
                     logger.error("Agent event queue timed out")
                     await ws.send_json(
@@ -174,9 +172,7 @@ async def websocket_endpoint(ws: WebSocket) -> None:
                             "content": "Request timed out",
                         }
                     )
-                    await ws.send_json(
-                        {"type": EventType.DONE, "usage": None}
-                    )
+                    await ws.send_json({"type": EventType.DONE, "usage": None})
                     break
                 if event is None:
                     break
