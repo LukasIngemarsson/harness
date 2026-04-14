@@ -22,9 +22,7 @@ class FileReadTool(Tool):
 
     def execute(self, path: str, **kwargs: object) -> ToolResult:
         target = (WORKSPACE_DIR / path).resolve()
-        if not str(target).startswith(
-            str(WORKSPACE_DIR.resolve())
-        ):
+        if not str(target).startswith(str(WORKSPACE_DIR.resolve())):
             raise ToolError("access denied — path is outside workspace")
         if not target.exists():
             raise ToolError(f"file not found: {path}")
@@ -55,13 +53,9 @@ class FileWriteTool(Tool):
         "required": ["path", "content"],
     }
 
-    def execute(
-        self, path: str, content: str, **kwargs: object
-    ) -> ToolResult:
+    def execute(self, path: str, content: str, **kwargs: object) -> ToolResult:
         target = (WORKSPACE_DIR / path).resolve()
-        if not str(target).startswith(
-            str(WORKSPACE_DIR.resolve())
-        ):
+        if not str(target).startswith(str(WORKSPACE_DIR.resolve())):
             raise ToolError("access denied — path is outside workspace")
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(content)

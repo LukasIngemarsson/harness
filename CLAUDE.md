@@ -55,12 +55,12 @@ uvicorn server:app                           # serves everything on port 8000
 
 ## Dependencies
 
-Managed via `pyproject.toml`. Requires a `.env` file with `MODEL`, `BASE_URL`, and `API_KEY`.
+Managed via `pyproject.toml` with a `uv.lock` lockfile. Requires a `.env` file with `MODEL`, `BASE_URL`, and `API_KEY`.
 
 ```bash
-pip install .            # runtime deps (includes fastapi, uvicorn)
-pip install ".[agent]"   # + pandas, numpy, matplotlib, requests, bs4
-pip install ".[dev]"     # + ruff, pytest
+uv sync                  # runtime deps (includes fastapi, uvicorn)
+uv sync --extra agent    # + pandas, numpy, matplotlib, requests, bs4
+uv sync --extra dev      # + ruff, pytest
 cd frontend && npm install  # frontend deps
 ```
 
@@ -68,10 +68,10 @@ cd frontend && npm install  # frontend deps
 
 ### Backend
 ```bash
-ruff format .           # format
-ruff check .            # lint
-ruff check . --fix      # lint + autofix
-pytest tests/ -v        # run tests
+uv run ruff format .           # format
+uv run ruff check .            # lint
+uv run ruff check . --fix      # lint + autofix
+uv run pytest tests/ -v        # run tests
 ```
 
 ### Frontend

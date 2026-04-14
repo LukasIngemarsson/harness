@@ -86,9 +86,7 @@ class Agent:
         self._child_agents: dict[str, "Agent"] = {}
         self._cancelled = False
         self._max_iterations = (
-            _MAX_SUB_AGENT_ITERATIONS
-            if is_sub_agent
-            else _MAX_ITERATIONS
+            _MAX_SUB_AGENT_ITERATIONS if is_sub_agent else _MAX_ITERATIONS
         )
 
     def run(self, message: str) -> Iterator[dict]:
@@ -143,13 +141,10 @@ class Agent:
                 while not stream_done.is_set():
                     if stream_done.wait(timeout=10):
                         return
-                    elapsed = (
-                        time.monotonic() - last_chunk_time[0]
-                    )
+                    elapsed = time.monotonic() - last_chunk_time[0]
                     if elapsed > 90:
                         logger.error(
-                            "Stream watchdog: no data for"
-                            " %.0fs, closing",
+                            "Stream watchdog: no data for %.0fs, closing",
                             elapsed,
                         )
                         try:
@@ -158,9 +153,7 @@ class Agent:
                             pass
                         return
 
-            watchdog = Thread(
-                target=_watchdog, daemon=True
-            )
+            watchdog = Thread(target=_watchdog, daemon=True)
             watchdog.start()
 
             try:
@@ -190,9 +183,9 @@ class Agent:
                                     "arguments": "",
                                 }
                             if tc.function.arguments:
-                                tool_calls[tc.index][
-                                    "arguments"
-                                ] += tc.function.arguments
+                                tool_calls[tc.index]["arguments"] += (
+                                    tc.function.arguments
+                                )
             except Exception as e:
                 logger.error("Stream interrupted: %s", e)
                 yield {
@@ -291,12 +284,13 @@ class Agent:
         return result or "(no output)"
 
     def spawn(
-        self, role: str, task: str, agent_id: str,
+        self,
+        role: str,
+        task: str,
+        agent_id: str,
         reflect: bool = False,
     ) -> Iterator[dict]:
-        logger.info(
-            "Spawning sub-agent %s: role=%s", agent_id, role
-        )
+        logger.info("Spawning sub-agent %s: role=%s", agent_id, role)
         system_prompt = (
             f"You are a {role}. Complete the following task"
             " thoroughly and return your result.\n\n"
@@ -329,9 +323,7 @@ class Agent:
             }
 
         if reflect and result:
-            logger.info(
-                "Sub-agent %s starting reflection", agent_id
-            )
+            logger.info("Sub-agent %s starting reflection", agent_id)
             reflected = ""
             for event in child.reflect(result):
                 if event["type"] == EventType.TOKEN:
@@ -350,9 +342,7 @@ class Agent:
             "result": result or "(no output)",
         }
 
-    def message_child(
-        self, agent_id: str, message: str
-    ) -> Iterator[dict]:
+    def message_child(self, agent_id: str, message: str) -> Iterator[dict]:
         child = self._child_agents.get(agent_id)
         if not child:
             yield {
@@ -373,9 +363,7 @@ class Agent:
             "agent_id": agent_id,
             "event": {
                 "type": EventType.TOKEN,
-                "content": (
-                    f"\n\n[Coordinator]: {message}\n\n"
-                ),
+                "content": (f"\n\n[Coordinator]: {message}\n\n"),
             },
         }
 
@@ -396,9 +384,7 @@ class Agent:
         }
 
     def compact(self) -> Iterator[dict]:
-        old_messages = (
-            self.conversation.get_messages_to_compact()
-        )
+        old_messages = self.conversation.get_messages_to_compact()
         if not old_messages:
             yield {
                 "type": EventType.SYSTEM_MESSAGE,
@@ -413,15 +399,11 @@ class Agent:
 
         fmt = Conversation._format_tokens
         old_count = len(self.conversation.messages)
-        old_tokens = fmt(
-            estimate_tokens(self.conversation.messages)
-        )
+        old_tokens = fmt(estimate_tokens(self.conversation.messages))
 
         yield {
             "type": EventType.SYSTEM_MESSAGE,
-            "content": (
-                f"Compacting {len(old_messages)} messages..."
-            ),
+            "content": (f"Compacting {len(old_messages)} messages..."),
         }
 
         summary_prompt = [
@@ -437,9 +419,7 @@ class Agent:
             },
             {
                 "role": Role.USER,
-                "content": json.dumps(
-                    old_messages, indent=2
-                ),
+                "content": json.dumps(old_messages, indent=2),
             },
         ]
 
@@ -451,11 +431,7 @@ class Agent:
             summary = response.choices[0].message.content
             if summary:
                 self.conversation.apply_compaction(summary)
-                new_tokens = fmt(
-                    estimate_tokens(
-                        self.conversation.messages
-                    )
-                )
+                new_tokens = fmt(estimate_tokens(self.conversation.messages))
                 yield {
                     "type": EventType.SYSTEM_MESSAGE,
                     "content": (
@@ -466,17 +442,13 @@ class Agent:
                     ),
                 }
         except Exception as e:
-            logger.warning(
-                "Compaction failed: %s", e
-            )
+            logger.warning("Compaction failed: %s", e)
             yield {
                 "type": EventType.SYSTEM_MESSAGE,
                 "content": f"Compaction failed: {e}",
             }
 
-    def _add_tool_call_message(
-        self, content: str, tool_calls: dict
-    ) -> None:
+    def _add_tool_call_message(self, content: str, tool_calls: dict) -> None:
         self.conversation.add_assistant_message(
             {
                 "role": Role.ASSISTANT,
@@ -495,9 +467,7 @@ class Agent:
             }
         )
 
-    def _execute_tool_calls(
-        self, tool_calls: dict
-    ) -> Iterator[dict]:
+    def _execute_tool_calls(self, tool_calls: dict) -> Iterator[dict]:
         yield {"type": EventType.TOOL_START}
 
         # Separate agent calls from regular tool calls
@@ -511,8 +481,7 @@ class Agent:
             except json.JSONDecodeError:
                 yield {
                     "type": EventType.ERROR,
-                    "content": "Malformed tool arguments:"
-                    f" {tc['arguments']}",
+                    "content": f"Malformed tool arguments: {tc['arguments']}",
                 }
                 self.conversation.add_tool_result(
                     tc["id"],
@@ -553,17 +522,14 @@ class Agent:
                 approved = self._confirm_queue.get()
                 if not approved:
                     denied = ToolResult(
-                        text="Tool call denied by user: "
-                        + danger_reason
+                        text="Tool call denied by user: " + danger_reason
                     )
                     logger.info("Tool call denied: %s", name)
                     yield {
                         "type": EventType.TOOL_RESULT,
                         "result": denied.text,
                     }
-                    self.conversation.add_tool_result(
-                        tc["id"], denied
-                    )
+                    self.conversation.add_tool_result(tc["id"], denied)
                     continue
 
             result = self._execute_single_tool(name, args)
@@ -573,29 +539,21 @@ class Agent:
                 "type": EventType.TOOL_RESULT,
                 "result": result.text,
             }
-            self.conversation.add_tool_result(
-                tc["id"], result
-            )
+            self.conversation.add_tool_result(tc["id"], result)
 
             if name in _TASK_TOOL_NAMES:
                 yield {
                     "type": EventType.TASK_UPDATE,
-                    "tasks": serialize_tasks(
-                        get_task_store().list_all()
-                    ),
+                    "tasks": serialize_tasks(get_task_store().list_all()),
                 }
 
         # Execute spawn calls in parallel
         if spawn_calls:
-            yield from self._execute_parallel_spawns(
-                spawn_calls
-            )
+            yield from self._execute_parallel_spawns(spawn_calls)
 
         # Execute message calls sequentially
         for tc, args in message_calls.values():
-            logger.info(
-                "Message agent: %s(%s)", tc["name"], args
-            )
+            logger.info("Message agent: %s(%s)", tc["name"], args)
             yield {
                 "type": EventType.TOOL_CALL,
                 "name": tc["name"],
@@ -605,16 +563,12 @@ class Agent:
             agent_id = args.get("agent_id", "")
             message = args.get("message", "")
             result = ""
-            for event in self.message_child(
-                agent_id, message
-            ):
+            for event in self.message_child(agent_id, message):
                 if event["type"] == EventType.SUB_AGENT_END:
                     result = event["result"]
                 yield event
 
-            self.conversation.add_tool_result(
-                tc["id"], ToolResult(text=str(result))
-            )
+            self.conversation.add_tool_result(tc["id"], ToolResult(text=str(result)))
             yield {
                 "type": EventType.TOOL_RESULT,
                 "result": result,
@@ -622,9 +576,7 @@ class Agent:
 
         yield {"type": EventType.TOOL_END}
 
-    def _execute_parallel_spawns(
-        self, spawn_calls: dict
-    ) -> Iterator[dict]:
+    def _execute_parallel_spawns(self, spawn_calls: dict) -> Iterator[dict]:
         if len(spawn_calls) == 1:
             # Single spawn — no threading needed
             tc, args = next(iter(spawn_calls.values()))
@@ -648,12 +600,8 @@ class Agent:
                     result = sub_event["result"]
                 yield sub_event
 
-            tool_result = (
-                f"[agent_id={agent_id}]\n\n{result}"
-            )
-            self.conversation.add_tool_result(
-                tc["id"], ToolResult(text=tool_result)
-            )
+            tool_result = f"[agent_id={agent_id}]\n\n{result}"
+            self.conversation.add_tool_result(tc["id"], ToolResult(text=tool_result))
             yield {
                 "type": EventType.TOOL_RESULT,
                 "result": result,
@@ -663,9 +611,7 @@ class Agent:
         # Multiple spawns — run in parallel threads
         queue: Queue = Queue()
 
-        def _run_spawn(
-            tc: dict, args: dict, agent_id: str
-        ) -> None:
+        def _run_spawn(tc: dict, args: dict, agent_id: str) -> None:
             try:
                 result = ""
                 for sub_event in self.spawn(
@@ -674,10 +620,7 @@ class Agent:
                     agent_id=agent_id,
                     reflect=args.get("reflect", False),
                 ):
-                    if (
-                        sub_event["type"]
-                        == EventType.SUB_AGENT_END
-                    ):
+                    if sub_event["type"] == EventType.SUB_AGENT_END:
                         result = sub_event["result"]
                     queue.put(sub_event)
                 queue.put(
@@ -739,10 +682,7 @@ class Agent:
             if event.get("_done"):
                 done_count += 1
                 tc = agent_ids[event["agent_id"]]
-                tool_result = (
-                    f"[agent_id={event['agent_id']}]"
-                    f"\n\n{event['result']}"
-                )
+                tool_result = f"[agent_id={event['agent_id']}]\n\n{event['result']}"
                 self.conversation.add_tool_result(
                     tc["id"], ToolResult(text=tool_result)
                 )
@@ -757,19 +697,13 @@ class Agent:
             t.join()
 
     def _maybe_compact(self) -> Iterator[dict]:
-        max_tokens = self.config.get(
-            "max_context_tokens", 128_000
-        )
-        if not self.conversation.needs_compaction(
-            max_tokens
-        ):
+        max_tokens = self.config.get("max_context_tokens", 128_000)
+        if not self.conversation.needs_compaction(max_tokens):
             return
         yield from self.compact()
 
     @staticmethod
-    def _check_dangerous(
-        name: str, args: dict
-    ) -> str | None:
+    def _check_dangerous(name: str, args: dict) -> str | None:
         if name == "run_shell":
             cmd = args.get("command", "")
             for pattern, reason in _DANGEROUS_SHELL_PATTERNS:
@@ -783,14 +717,10 @@ class Agent:
         return None
 
     @staticmethod
-    def _make_cache_key(
-        name: str, args: dict
-    ) -> tuple:
+    def _make_cache_key(name: str, args: dict) -> tuple:
         return (name, json.dumps(args, sort_keys=True))
 
-    def _execute_single_tool(
-        self, name: str, args: dict
-    ) -> ToolResult:
+    def _execute_single_tool(self, name: str, args: dict) -> ToolResult:
         if name not in TOOL_MAP:
             return ToolResult(text=f"Error: tool '{name}' not found")
 
@@ -800,9 +730,7 @@ class Agent:
         if tool.cacheable:
             cache_key = self._make_cache_key(name, args)
             if cache_key in self._tool_cache:
-                logger.info(
-                    "Cache hit: %s(%s)", name, args
-                )
+                logger.info("Cache hit: %s(%s)", name, args)
                 return self._tool_cache[cache_key]
 
         # Execute with retry on retryable errors
@@ -814,10 +742,7 @@ class Agent:
                 logger.info("Tool finished: %s", name)
             except ToolError as e:
                 last_error = f"Error: {e}"
-                if (
-                    not e.retryable
-                    or attempt >= _MAX_TOOL_RETRIES
-                ):
+                if not e.retryable or attempt >= _MAX_TOOL_RETRIES:
                     return ToolResult(text=last_error)
                 logger.warning(
                     "Tool %s attempt %d failed: %s",
@@ -828,9 +753,7 @@ class Agent:
                 time.sleep(_RETRY_DELAY)
                 continue
             except Exception as e:
-                return ToolResult(
-                    text=f"Error: {type(e).__name__}: {e}"
-                )
+                return ToolResult(text=f"Error: {type(e).__name__}: {e}")
 
             if tool.cacheable:
                 cache_key = self._make_cache_key(name, args)
@@ -838,6 +761,4 @@ class Agent:
 
             return result
 
-        return ToolResult(
-            text=last_error or "Error: tool execution failed"
-        )
+        return ToolResult(text=last_error or "Error: tool execution failed")

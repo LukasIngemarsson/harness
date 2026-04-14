@@ -52,8 +52,7 @@ def _render_assistant(tokens: str) -> None:
 def _render_welcome(config: dict) -> None:
     console.print(
         Panel(
-            f"[bold]Harness[/]  |  {config['model']}  |  "
-            f"Type [green]/[/] for commands",
+            f"[bold]Harness[/]  |  {config['model']}  |  Type [green]/[/] for commands",
             border_style="blue",
             expand=False,
         )
@@ -159,9 +158,7 @@ def main() -> None:
                             )
                         )
                         answer = (
-                            console.input(
-                                f"{_INDENT}[yellow]Approve? (y/n):[/] "
-                            )
+                            console.input(f"{_INDENT}[yellow]Approve? (y/n):[/] ")
                             .strip()
                             .lower()
                         )
@@ -219,8 +216,7 @@ def main() -> None:
                             task_preview += "…"
                         console.print(
                             Text(
-                                f"{_INDENT}▸ {label} {event['role']}:"
-                                f" {task_preview}",
+                                f"{_INDENT}▸ {label} {event['role']}: {task_preview}",
                                 style="magenta",
                             )
                         )
@@ -232,10 +228,7 @@ def main() -> None:
                         inner = event["event"]
                         if inner["type"] == EventType.TOOL_CALL:
                             args_str = _format_args(inner["args"])
-                            _dim(
-                                f"{_INDENT2}● {label}"
-                                f" {inner['name']}({args_str})"
-                            )
+                            _dim(f"{_INDENT2}● {label} {inner['name']}({args_str})")
 
                     case EventType.SUB_AGENT_END:
                         aid = event["agent_id"]
@@ -243,8 +236,7 @@ def main() -> None:
                         label = sa.get("label", "?")
                         console.print(
                             Text(
-                                f"{_INDENT}◂ {label}"
-                                f" {sa.get('role', '?')}: done",
+                                f"{_INDENT}◂ {label} {sa.get('role', '?')}: done",
                                 style="magenta",
                             )
                         )
@@ -268,9 +260,7 @@ def main() -> None:
             conversation.drop_last_incomplete()
             conversation.save()
             console.print()
-            console.print(
-                Text(f"{_INDENT}Cancelled.", style="dim")
-            )
+            console.print(Text(f"{_INDENT}Cancelled.", style="dim"))
 
     conversation.save()
     console.print()

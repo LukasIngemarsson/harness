@@ -3,9 +3,7 @@ from dataclasses import dataclass
 
 
 class ToolError(Exception):
-    def __init__(
-        self, message: str, *, retryable: bool = False
-    ) -> None:
+    def __init__(self, message: str, *, retryable: bool = False) -> None:
         super().__init__(message)
         self.retryable = retryable
 
@@ -26,7 +24,6 @@ class Tool(ABC):
     @abstractmethod
     def execute(self, **kwargs: object) -> ToolResult:
         raise NotImplementedError
-
 
     def to_api_format(self) -> dict:
         return {

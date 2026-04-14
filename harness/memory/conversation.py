@@ -13,9 +13,7 @@ RECENT_MESSAGES_TO_KEEP = 10
 
 
 def estimate_tokens(messages: list[dict]) -> int:
-    total_chars = sum(
-        len(json.dumps(msg)) for msg in messages
-    )
+    total_chars = sum(len(json.dumps(msg)) for msg in messages)
     return total_chars // _CHARS_PER_TOKEN
 
 
@@ -34,9 +32,7 @@ class Conversation:
     def add_assistant_message(self, message: str) -> None:
         self._messages.append(message)
 
-    def add_tool_result(
-        self, tool_call_id: str, result: ToolResult
-    ) -> None:
+    def add_tool_result(self, tool_call_id: str, result: ToolResult) -> None:
         if result.image_base64:
             content: str | list = [
                 {"type": "text", "text": result.text},
@@ -44,8 +40,7 @@ class Conversation:
                     "type": "image_url",
                     "image_url": {
                         "url": (
-                            f"data:{result.media_type}"
-                            f";base64,{result.image_base64}"
+                            f"data:{result.media_type};base64,{result.image_base64}"
                         ),
                     },
                 },
@@ -72,10 +67,7 @@ class Conversation:
         token_count = estimate_tokens(self._messages)
         threshold = int(max_tokens * 0.75)
         min_messages = RECENT_MESSAGES_TO_KEEP + 2
-        return (
-            token_count > threshold
-            and len(self._messages) > min_messages
-        )
+        return token_count > threshold and len(self._messages) > min_messages
 
     def can_compact(self) -> bool:
         return len(self._messages) > RECENT_MESSAGES_TO_KEEP + 1
@@ -93,10 +85,7 @@ class Conversation:
             self._messages[0],
             {
                 "role": Role.SYSTEM,
-                "content": (
-                    "Summary of earlier conversation:\n\n"
-                    + summary
-                ),
+                "content": ("Summary of earlier conversation:\n\n" + summary),
             },
             *recent,
         ]
@@ -120,10 +109,8 @@ class Conversation:
         for msg in self._messages:
             role = msg.get("role", "unknown")
             counts[role] = counts.get(role, 0) + 1
-            if (
-                role == Role.SYSTEM
-                and "Summary of earlier conversation"
-                in msg.get("content", "")
+            if role == Role.SYSTEM and "Summary of earlier conversation" in msg.get(
+                "content", ""
             ):
                 has_summary = True
 
@@ -177,9 +164,7 @@ class Conversation:
 
     def _repair_incomplete(self) -> None:
         tool_result_ids = {
-            m.get("tool_call_id")
-            for m in self._messages
-            if m.get("role") == Role.TOOL
+            m.get("tool_call_id") for m in self._messages if m.get("role") == Role.TOOL
         }
         cleaned = []
         skip_until_user = False
@@ -191,10 +176,7 @@ class Conversation:
                     cleaned.append(msg)
                 continue
             if role == Role.ASSISTANT and msg.get("tool_calls"):
-                if any(
-                    tc["id"] not in tool_result_ids
-                    for tc in msg["tool_calls"]
-                ):
+                if any(tc["id"] not in tool_result_ids for tc in msg["tool_calls"]):
                     skip_until_user = True
                     continue
             cleaned.append(msg)

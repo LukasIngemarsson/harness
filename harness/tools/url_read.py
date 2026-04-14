@@ -21,9 +21,7 @@ class _TextExtractor(HTMLParser):
         self._text: list[str] = []
         self._skip = False
 
-    def handle_starttag(
-        self, tag: str, attrs: list[tuple[str, str | None]]
-    ) -> None:
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         if tag in ("script", "style", "noscript"):
             self._skip = True
 
@@ -67,9 +65,7 @@ class UrlReadTool(Tool):
             with urlopen(req, timeout=15) as resp:
                 html = resp.read().decode("utf-8", errors="replace")
         except Exception as e:
-            raise ToolError(
-                f"failed to fetch URL: {e}", retryable=True
-            )
+            raise ToolError(f"failed to fetch URL: {e}", retryable=True)
 
         extractor = _TextExtractor()
         extractor.feed(html)
